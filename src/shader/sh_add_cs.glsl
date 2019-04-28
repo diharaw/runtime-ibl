@@ -2,8 +2,10 @@
 // CONSTANTS ---------------------------------------------------------
 // ------------------------------------------------------------------
 
-#define IMAGE_SIZE 16
-#define CUBEMAP_SIZE 6
+#define LOCAL_SIZE 8
+#define ENVIRONMENT_MAP_SIZE 64
+#define SH_INTERMEDIATE_SIZE (ENVIRONMENT_MAP_SIZE / LOCAL_SIZE)
+#define NUM_CUBEMAP_FACES 6
 
 const float Pi = 3.141592654;
 
@@ -11,7 +13,7 @@ const float Pi = 3.141592654;
 // INPUTS -----------------------------------------------------------
 // ------------------------------------------------------------------
 
-layout(local_size_x = 1, local_size_y = IMAGE_SIZE, local_size_z = CUBEMAP_SIZE) in;
+layout(local_size_x = 1, local_size_y = SH_INTERMEDIATE_SIZE, local_size_z = NUM_CUBEMAP_FACES) in;
 
 // ------------------------------------------------------------------
 // OUTPUTS ----------------------------------------------------------
@@ -29,8 +31,8 @@ uniform sampler2DArray s_SHIntermediate;
 // SHARED -----------------------------------------------------------
 // ------------------------------------------------------------------
 
-shared vec3  g_sh_coeffs[IMAGE_SIZE][CUBEMAP_SIZE];
-shared float g_weights[IMAGE_SIZE][CUBEMAP_SIZE];
+shared vec3  g_sh_coeffs[SH_INTERMEDIATE_SIZE][NUM_CUBEMAP_FACES];
+shared float g_weights[SH_INTERMEDIATE_SIZE][NUM_CUBEMAP_FACES];
 
 // ------------------------------------------------------------------
 // MAIN -------------------------------------------------------------
@@ -38,18 +40,15 @@ shared float g_weights[IMAGE_SIZE][CUBEMAP_SIZE];
 
 void main()
 {
-    for (uint i = 0; i < (IMAGE_SIZE * CUBEMAP_SIZE); i++)
-    {
-        g_sh_coeffs[gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] = vec3(0.0);
-        g_weights[gl_GlobalInvocationID.y][gl_GlobalInvocationID.z]   = 0.0;
-    }
+    g_sh_coeffs[gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] = vec3(0.0);
+    g_weights[gl_GlobalInvocationID.y][gl_GlobalInvocationID.z]   = 0.0;
 
     barrier();
 
     // Add up coefficients along X axis.
-    for (uint i = 0; i < IMAGE_SIZE; i++)
+    for (uint i = 0; i < SH_INTERMEDIATE_SIZE; i++)
     {
-        ivec3 p   = ivec3(gl_GlobalInvocationID.x * IMAGE_SIZE + i, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
+        ivec3 p   = ivec3(gl_GlobalInvocationID.x * SH_INTERMEDIATE_SIZE + i, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
         vec4  val = texelFetch(s_SHIntermediate, p, 0);
 
         g_sh_coeffs[gl_GlobalInvocationID.y][gl_GlobalInvocationID.z] += val.rgb;
@@ -61,7 +60,7 @@ void main()
     if (gl_GlobalInvocationID.z == 0)
     {
         // Add up coefficients along Z axis.
-        for (uint i = 1; i < CUBEMAP_SIZE; i++)
+        for (uint i = 1; i < NUM_CUBEMAP_FACES; i++)
         {
             g_sh_coeffs[gl_GlobalInvocationID.y][0] += g_sh_coeffs[gl_GlobalInvocationID.y][i];
             g_weights[gl_GlobalInvocationID.y][0] += g_weights[gl_GlobalInvocationID.y][i];
@@ -73,7 +72,7 @@ void main()
     if (gl_GlobalInvocationID.y == 0 && gl_GlobalInvocationID.z == 0)
     {
         // Add up coefficients along Y axis.
-        for (uint i = 1; i < IMAGE_SIZE; i++)
+        for (uint i = 1; i < SH_INTERMEDIATE_SIZE; i++)
         {
             g_sh_coeffs[0][0] += g_sh_coeffs[i][0];
             g_weights[0][0] += g_weights[i][0];
