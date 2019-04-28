@@ -4,33 +4,33 @@
 
 #define LOCAL_SIZE 8
 #define ENVIRONMENT_MAP_SIZE 128
-#define SH_INTERMEDIATE_SIZE (ENVIRONMENT_MAP_SIZE/LOCAL_SIZE)
+#define SH_INTERMEDIATE_SIZE (ENVIRONMENT_MAP_SIZE / LOCAL_SIZE)
 #define POS_X 0
 #define NEG_X 1
 #define POS_Y 2
 #define NEG_Y 3
-#define POS_Z 4 
+#define POS_Z 4
 #define NEG_Z 5
 
 // ------------------------------------------------------------------
 // INPUTS -----------------------------------------------------------
 // ------------------------------------------------------------------
 
-layout (local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
+layout(local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) in;
 
 // ------------------------------------------------------------------
 // OUTPUTS ----------------------------------------------------------
 // ------------------------------------------------------------------
 
-layout (binding = 0, rgba32f) uniform image2DArray i_Cubemap;
+layout(binding = 0, rgba32f) uniform image2DArray i_Cubemap;
 
 // ------------------------------------------------------------------
 // SAMPLERS ---------------------------------------------------------
 // ------------------------------------------------------------------
 
 uniform samplerCube s_Cubemap;
-uniform float u_Width;
-uniform float u_Height;
+uniform float       u_Width;
+uniform float       u_Height;
 
 // ------------------------------------------------------------------
 // STRUCTURES -------------------------------------------------------
@@ -93,10 +93,10 @@ float calculate_solid_angle(uint x, uint y)
 
     // assumes square face
     float half_texel_size = 1.0 / u_Width;
-    float x0 = s - half_texel_size;
-    float y0 = t - half_texel_size;
-    float x1 = s + half_texel_size;
-    float y1 = t + half_texel_size;
+    float x0              = s - half_texel_size;
+    float y0              = t - half_texel_size;
+    float x1              = s + half_texel_size;
+    float y1              = t + half_texel_size;
 
     return area_integral(x0, y0) - area_integral(x0, y1) - area_integral(x1, y0) + area_integral(x1, y1);
 }
@@ -143,11 +143,11 @@ vec3 calculate_direction(uint face, uint face_x, uint face_y)
             break;
     }
 
-    vec3 d;
+    vec3  d;
     float inv_len = 1.0 / sqrt(x * x + y * y + z * z);
-    d.x = x * inv_len;
-    d.y = y * inv_len;
-    d.z = z * inv_len;
+    d.x           = x * inv_len;
+    d.y           = y * inv_len;
+    d.z           = z * inv_len;
 
     return d;
 }
@@ -157,7 +157,7 @@ vec3 calculate_direction(uint face, uint face_x, uint face_y)
 // ------------------------------------------------------------------
 
 shared SH9Color g_sh_coeffs[LOCAL_SIZE * LOCAL_SIZE];
-shared float g_weights[LOCAL_SIZE * LOCAL_SIZE];
+shared float    g_weights[LOCAL_SIZE * LOCAL_SIZE];
 
 // ------------------------------------------------------------------
 // MAIN -------------------------------------------------------------
@@ -174,9 +174,9 @@ void main()
 
     SH9 basis;
 
-    vec3 dir = calculate_direction(gl_GlobalInvocationID.z, gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
+    vec3  dir         = calculate_direction(gl_GlobalInvocationID.z, gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
     float solid_angle = calculate_solid_angle(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);
-    vec3 texel = textureLod(s_Cubemap, dir, 2.0).rgb;
+    vec3  texel       = textureLod(s_Cubemap, dir, 2.0).rgb;
 
     project_onto_sh9(dir, basis);
 

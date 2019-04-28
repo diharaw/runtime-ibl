@@ -58,7 +58,7 @@ vec3 evaluate_sh9_irradiance(in vec3 direction)
 {
     SH9 basis;
 
-	project_onto_sh9(direction, basis);
+    project_onto_sh9(direction, basis);
 
     basis.c[0] *= CosineA0;
     basis.c[1] *= CosineA1;
@@ -86,7 +86,7 @@ vec3 evaluate_sh9_irradiance(in SH9Color coef, in vec3 direction)
 {
     SH9 basis;
 
-	project_onto_sh9(direction, basis);
+    project_onto_sh9(direction, basis);
 
     basis.c[0] *= CosineA0;
     basis.c[1] *= CosineA1;
@@ -116,40 +116,40 @@ vec3 evaluate_sh9_irradiance(in SH9Color coef, in vec3 direction)
 
 void main()
 {
-	vec3 env_color;
+    vec3 env_color;
 
-	if (u_Type == 0) // Environment Map
-		env_color = texture(s_Cubemap, FS_IN_WorldPos).rgb;
-	else if (u_Type == 1) // Irradiance
-	{
-		env_color = evaluate_sh9_irradiance(normalize(FS_IN_WorldPos));
+    if (u_Type == 0) // Environment Map
+        env_color = texture(s_Cubemap, FS_IN_WorldPos).rgb;
+    else if (u_Type == 1) // Irradiance
+    {
+        env_color = evaluate_sh9_irradiance(normalize(FS_IN_WorldPos));
 
-		env_color = env_color / Pi;
-	}
-	else if (u_Type == 2) //Debug irradiance
-	{
-		SH9Color coef;
+        env_color = env_color / Pi;
+    }
+    else if (u_Type == 2) //Debug irradiance
+    {
+        SH9Color coef;
 
-		coef.c[0] = vec3(1.587685, 0.938743, 0.946143);
-		coef.c[1] = vec3(0.964110, 0.260693, -0.252178);
-		coef.c[2] = vec3(-0.284860, 0.083329, 0.312422);
-		coef.c[3] = vec3(-0.268414, -0.068907, 0.142706);
-		coef.c[4] = vec3(0.014640, -0.082044, -0.186975);
-		coef.c[5] = vec3(-0.233512, -0.225626, -0.324495);
-		coef.c[6] = vec3(0.147594, 0.146880, 0.191309);
-		coef.c[7] = vec3(-0.077331, -0.163117, -0.227645);
-		coef.c[8] = vec3(-0.270700, -0.070550, 0.029554);
+        coef.c[0] = vec3(1.587685, 0.938743, 0.946143);
+        coef.c[1] = vec3(0.964110, 0.260693, -0.252178);
+        coef.c[2] = vec3(-0.284860, 0.083329, 0.312422);
+        coef.c[3] = vec3(-0.268414, -0.068907, 0.142706);
+        coef.c[4] = vec3(0.014640, -0.082044, -0.186975);
+        coef.c[5] = vec3(-0.233512, -0.225626, -0.324495);
+        coef.c[6] = vec3(0.147594, 0.146880, 0.191309);
+        coef.c[7] = vec3(-0.077331, -0.163117, -0.227645);
+        coef.c[8] = vec3(-0.270700, -0.070550, 0.029554);
 
-		env_color = evaluate_sh9_irradiance(coef, normalize(FS_IN_WorldPos));
+        env_color = evaluate_sh9_irradiance(coef, normalize(FS_IN_WorldPos));
 
-		env_color = env_color / Pi;
-	}
+        env_color = env_color / Pi;
+    }
 
-	// HDR tonemap and gamma correct
-	env_color = env_color / (env_color + vec3(1.0));
-	env_color = pow(env_color, vec3(1.0/2.2)); 
+    // HDR tonemap and gamma correct
+    env_color = env_color / (env_color + vec3(1.0));
+    env_color = pow(env_color, vec3(1.0 / 2.2));
 
-	PS_OUT_Color = env_color;
+    PS_OUT_Color = env_color;
 }
 
 // ------------------------------------------------------------------

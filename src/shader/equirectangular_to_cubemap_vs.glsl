@@ -1,4 +1,4 @@
-layout (location = 0) in vec3 VS_IN_Position;
+layout(location = 0) in vec3 VS_IN_Position;
 
 // ------------------------------------------------------------------
 // OUTPUT VARIABLES  ------------------------------------------------
@@ -20,7 +20,7 @@ uniform mat4 u_View;
 void main(void)
 {
     FS_IN_WorldPos = VS_IN_Position;
-    gl_Position =  u_Projection * u_View * vec4(VS_IN_Position, 1.0);
+    gl_Position    = u_Projection * u_View * vec4(VS_IN_Position, 1.0);
 }
 
 // ------------------------------------------------------------------

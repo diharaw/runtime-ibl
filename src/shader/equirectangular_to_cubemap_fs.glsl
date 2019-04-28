@@ -36,9 +36,9 @@ vec2 sample_spherical_map(vec3 v)
 
 void main()
 {
-    vec2 uv = sample_spherical_map(normalize(FS_IN_WorldPos));
+    vec2 uv    = sample_spherical_map(normalize(FS_IN_WorldPos));
     vec3 color = texture(s_EnvMap, uv).rgb;
-    
+
     FS_OUT_Color = color;
 }
 

@@ -1,4 +1,4 @@
-layout (location = 0) in vec3 VS_IN_Position;
+layout(location = 0) in vec3 VS_IN_Position;
 
 // ------------------------------------------------------------------
 // OUTPUT VARIABLES  ------------------------------------------------
@@ -21,8 +21,8 @@ void main()
 {
     FS_IN_WorldPos = VS_IN_Position;
 
-	mat4 rotView = mat4(mat3(u_View));
-	vec4 clipPos = u_Projection * rotView * vec4(VS_IN_Position, 1.0);
+    mat4 rotView = mat4(mat3(u_View));
+    vec4 clipPos = u_Projection * rotView * vec4(VS_IN_Position, 1.0);
 
-	gl_Position = clipPos.xyww;
+    gl_Position = clipPos.xyww;
 }
