@@ -12,9 +12,10 @@
 #define CAMERA_FAR_PLANE 10000.0f
 #define ENVIRONMENT_MAP_SIZE 512
 #define PREFILTER_MAP_SIZE 256
-#define PREFILTER_MIP_LEVELS 7
+#define PREFILTER_MIP_LEVELS 5
 #define IRRADIANCE_CUBEMAP_SIZE 128
 #define IRRADIANCE_WORK_GROUP_SIZE 8
+#define PREFILTER_WORK_GROUP_SIZE 8
 #define SH_INTERMEDIATE_SIZE (IRRADIANCE_CUBEMAP_SIZE / IRRADIANCE_WORK_GROUP_SIZE)
 
 class RuntimeIBL : public dw::Application
@@ -61,6 +62,8 @@ protected:
             ui();
 
         compute_spherical_harmonics();
+
+		prefilter_cubemap();
 
         render_meshes();
 
@@ -189,11 +192,20 @@ private:
             ImGui::EndCombo();
         }
 
+		if (m_type == 2)
+            ImGui::SliderFloat("Roughness", &m_roughness, 0, PREFILTER_MIP_LEVELS - 1);
+
 		ImGui::Separator();
 
 		ImGui::Text("Profiler");
 
         dw::profiler::ui();
+
+		ImGui::Separator();
+
+        ImGui::Text("Prefilter Options");
+
+		ImGui::InputInt("Sample Count", &m_sample_count);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -232,26 +244,26 @@ private:
             }
         }
 
-        //{
-        //	// Create general shaders
-        //	m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
+        {
+        	// Create general shaders
+        	m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
 
-        //	if (!m_prefilter_cs)
-        //	{
-        //		DW_LOG_FATAL("Failed to create Shaders");
-        //		return false;
-        //	}
+        	if (!m_prefilter_cs)
+        	{
+        		DW_LOG_FATAL("Failed to create Shaders");
+        		return false;
+        	}
 
-        //	// Create general shader program
-        //	dw::Shader* shaders[] = { m_prefilter_cs.get() };
-        //	m_prefilter_program = std::make_unique<dw::Program>(1, shaders);
+        	// Create general shader program
+        	dw::Shader* shaders[] = { m_prefilter_cs.get() };
+        	m_prefilter_program = std::make_unique<dw::Program>(1, shaders);
 
-        //	if (!m_prefilter_program)
-        //	{
-        //		DW_LOG_FATAL("Failed to create Shader Program");
-        //		return false;
-        //	}
-        //}
+        	if (!m_prefilter_program)
+        	{
+        		DW_LOG_FATAL("Failed to create Shader Program");
+        		return false;
+        	}
+        }
 
         {
             // Create general shaders
@@ -347,12 +359,7 @@ private:
     {
         m_env_cubemap   = std::make_unique<dw::TextureCube>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
         m_cubemap_depth = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
-
-        m_env_cubemap->set_min_filter(GL_LINEAR);
-        m_env_cubemap->set_mag_filter(GL_LINEAR);
-
-        m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
-
+        m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA32F, GL_RGBA, GL_FLOAT);
         m_sh_intermediate = std::make_unique<dw::Texture2D>(SH_INTERMEDIATE_SIZE * 9, SH_INTERMEDIATE_SIZE, 6, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
         m_sh_intermediate->set_min_filter(GL_NEAREST);
@@ -457,6 +464,7 @@ private:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, m_width, m_height);
 
+		m_cubemap_program->set_uniform("u_Roughness", m_roughness);
         m_cubemap_program->set_uniform("u_Type", m_type);
         m_cubemap_program->set_uniform("u_View", m_main_camera->m_view);
         m_cubemap_program->set_uniform("u_Projection", m_main_camera->m_projection);
@@ -464,8 +472,11 @@ private:
         if (m_cubemap_program->set_uniform("s_Cubemap", 0))
             m_env_cubemap->bind(0);
 
-        if (m_cubemap_program->set_uniform("s_SH", 1))
-            m_sh->bind(1);
+		if (m_cubemap_program->set_uniform("s_Prefilter", 1))
+            m_prefilter_cubemap->bind(1);
+
+        if (m_cubemap_program->set_uniform("s_SH", 2))
+            m_sh->bind(2);
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -535,6 +546,32 @@ private:
     void prefilter_cubemap()
     {
         DW_SCOPED_SAMPLE("Prefilter");
+
+		m_prefilter_program->use();
+
+		if (m_prefilter_program->set_uniform("s_EnvMap", 1))
+			m_env_cubemap->bind(1);
+
+		int32_t start_level = (ENVIRONMENT_MAP_SIZE / PREFILTER_MAP_SIZE) - 1;
+        m_prefilter_program->set_uniform("u_StartMipLevel", start_level);
+        
+		for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
+		{
+            uint32_t mip_width  = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
+            uint32_t mip_height = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
+	
+			float roughness = (float)mip / (float)((PREFILTER_MIP_LEVELS - 1)-1);
+            m_prefilter_program->set_uniform("u_Roughness", roughness);
+            m_prefilter_program->set_uniform("u_SampleCount", m_sample_count);
+            m_prefilter_program->set_uniform("u_Width", float(mip_width));
+            m_prefilter_program->set_uniform("u_Height", float(mip_height));
+     
+			m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA32F);
+			
+			glDispatchCompute(mip_width / PREFILTER_WORK_GROUP_SIZE, mip_height / PREFILTER_WORK_GROUP_SIZE, 6);
+			
+			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+		}
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -959,6 +996,8 @@ private:
     float m_camera_x           = 0.0f;
     float m_camera_y           = 0.0f;
     int   m_type               = 0;
+    int   m_sample_count       = 32;
+    float m_roughness          = 0.0f;
 };
 
 DW_DECLARE_MAIN(RuntimeIBL)

@@ -3,7 +3,6 @@
 // ------------------------------------------------------------------
 
 #define LOCAL_SIZE 8
-#define SAMPLE_COUNT 32
 #define POS_X 0
 #define NEG_X 1
 #define POS_Y 2
@@ -30,7 +29,10 @@ layout(binding = 0, rgba32f) uniform imageCube i_Prefiltered;
 
 uniform samplerCube s_EnvMap;
 uniform float       u_Roughness;
+uniform float       u_Width;
+uniform float       u_Height;
 uniform int         u_StartMipLevel;
+uniform int         u_SampleCount;
 
 // ------------------------------------------------------------------
 // FUNCTIONS --------------------------------------------------------
@@ -171,10 +173,10 @@ void main()
     vec3 prefiltered_color = vec3(0.0);
     float total_weight = 0.0;
     
-    for(uint i = 0u; i < SAMPLE_COUNT; ++i)
+    for(uint i = 0u; i < u_SampleCount; ++i)
     {
         // generates a sample vector that's biased towards the preferred alignment direction (importance sampling).
-        vec2 Xi = hammersley(i, SAMPLE_COUNT);
+        vec2 Xi = hammersley(i, u_SampleCount);
         vec3 H = importance_sample_ggx(Xi, N, u_Roughness);
         vec3 L  = normalize(2.0 * dot(V, H) * H - V);
 
@@ -189,7 +191,7 @@ void main()
             float pdf = D * NdotH / (4.0 * HdotV) + 0.0001; 
 
             float sa_texel  = 4.0 * PI / (6.0 * resolution * resolution);
-            float sa_sample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
+            float sa_sample = 1.0 / (float(u_SampleCount) * pdf + 0.0001);
 
             float mip_level = u_Roughness == 0.0 ? 0.0 : 0.5 * log2(sa_sample / sa_texel); 
             
@@ -200,7 +202,8 @@ void main()
 
     prefiltered_color = prefiltered_color / total_weight;
 
-    imageStore(i_Prefiltered, N, vec4(prefiltered_color, 1.0));
+    ivec3 p = ivec3(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
+    imageStore(i_Prefiltered, p, vec4(prefiltered_color, 1.0));
 }
 
 // ------------------------------------------------------------------

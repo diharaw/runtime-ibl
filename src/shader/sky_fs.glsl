@@ -5,9 +5,11 @@ out vec3 PS_OUT_Color;
 in vec3 FS_IN_WorldPos;
 
 uniform samplerCube s_Cubemap;
+uniform samplerCube s_Prefilter;
 uniform sampler2D s_SH;
 
 uniform int u_Type;
+uniform float u_Roughness;
 
 const float Pi       = 3.141592654;
 const float CosineA0 = Pi;
@@ -126,24 +128,8 @@ void main()
 
         env_color = env_color / Pi;
     }
-    else if (u_Type == 2) //Debug irradiance
-    {
-        SH9Color coef;
-
-        coef.c[0] = vec3(1.587685, 0.938743, 0.946143);
-        coef.c[1] = vec3(0.964110, 0.260693, -0.252178);
-        coef.c[2] = vec3(-0.284860, 0.083329, 0.312422);
-        coef.c[3] = vec3(-0.268414, -0.068907, 0.142706);
-        coef.c[4] = vec3(0.014640, -0.082044, -0.186975);
-        coef.c[5] = vec3(-0.233512, -0.225626, -0.324495);
-        coef.c[6] = vec3(0.147594, 0.146880, 0.191309);
-        coef.c[7] = vec3(-0.077331, -0.163117, -0.227645);
-        coef.c[8] = vec3(-0.270700, -0.070550, 0.029554);
-
-        env_color = evaluate_sh9_irradiance(coef, normalize(FS_IN_WorldPos));
-
-        env_color = env_color / Pi;
-    }
+    else if (u_Type == 2) // Prefilter
+        env_color = textureLod(s_Prefilter, FS_IN_WorldPos, u_Roughness).rgb;
 
     // HDR tonemap and gamma correct
     env_color = env_color / (env_color + vec3(1.0));
