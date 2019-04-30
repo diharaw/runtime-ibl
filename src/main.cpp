@@ -8,6 +8,8 @@
 #include <stack>
 #include <random>
 #include <chrono>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 #define CAMERA_FAR_PLANE 10000.0f
 #define ENVIRONMENT_MAP_SIZE 512
@@ -63,7 +65,7 @@ protected:
 
         compute_spherical_harmonics();
 
-		prefilter_cubemap();
+        prefilter_cubemap();
 
         render_meshes();
 
@@ -192,20 +194,20 @@ private:
             ImGui::EndCombo();
         }
 
-		if (m_type == 2)
+        if (m_type == 2)
             ImGui::SliderFloat("Roughness", &m_roughness, 0, PREFILTER_MIP_LEVELS - 1);
 
-		ImGui::Separator();
+        ImGui::Separator();
 
-		ImGui::Text("Profiler");
+        ImGui::Text("Profiler");
 
         dw::profiler::ui();
 
-		ImGui::Separator();
+        ImGui::Separator();
 
         ImGui::Text("Prefilter Options");
 
-		ImGui::InputInt("Sample Count", &m_sample_count);
+        ImGui::InputInt("Sample Count", &m_sample_count);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -245,24 +247,24 @@ private:
         }
 
         {
-        	// Create general shaders
-        	m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
+            // Create general shaders
+            m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
 
-        	if (!m_prefilter_cs)
-        	{
-        		DW_LOG_FATAL("Failed to create Shaders");
-        		return false;
-        	}
+            if (!m_prefilter_cs)
+            {
+                DW_LOG_FATAL("Failed to create Shaders");
+                return false;
+            }
 
-        	// Create general shader program
-        	dw::Shader* shaders[] = { m_prefilter_cs.get() };
-        	m_prefilter_program = std::make_unique<dw::Program>(1, shaders);
+            // Create general shader program
+            dw::Shader* shaders[] = { m_prefilter_cs.get() };
+            m_prefilter_program   = std::make_unique<dw::Program>(1, shaders);
 
-        	if (!m_prefilter_program)
-        	{
-        		DW_LOG_FATAL("Failed to create Shader Program");
-        		return false;
-        	}
+            if (!m_prefilter_program)
+            {
+                DW_LOG_FATAL("Failed to create Shader Program");
+                return false;
+            }
         }
 
         {
@@ -357,11 +359,11 @@ private:
 
     bool create_framebuffer()
     {
-		// uint32_t w, uint32_t h, uint32_t array_size, int32_t mip_levels, GLenum internal_format, GLenum format, GLenum type
-        m_env_cubemap   = std::make_unique<dw::TextureCube>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
-        m_cubemap_depth = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
+        // uint32_t w, uint32_t h, uint32_t array_size, int32_t mip_levels, GLenum internal_format, GLenum format, GLenum type
+        m_env_cubemap       = std::make_unique<dw::TextureCube>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
+        m_cubemap_depth     = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
         m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA32F, GL_RGBA, GL_FLOAT);
-        m_sh_intermediate = std::make_unique<dw::Texture2D>(SH_INTERMEDIATE_SIZE * 9, SH_INTERMEDIATE_SIZE, 6, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        m_sh_intermediate   = std::make_unique<dw::Texture2D>(SH_INTERMEDIATE_SIZE * 9, SH_INTERMEDIATE_SIZE, 6, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
         m_sh_intermediate->set_min_filter(GL_NEAREST);
         m_sh_intermediate->set_mag_filter(GL_NEAREST);
@@ -465,7 +467,7 @@ private:
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, m_width, m_height);
 
-		m_cubemap_program->set_uniform("u_Roughness", m_roughness);
+        m_cubemap_program->set_uniform("u_Roughness", m_roughness);
         m_cubemap_program->set_uniform("u_Type", m_type);
         m_cubemap_program->set_uniform("u_View", m_main_camera->m_view);
         m_cubemap_program->set_uniform("u_Projection", m_main_camera->m_projection);
@@ -473,7 +475,7 @@ private:
         if (m_cubemap_program->set_uniform("s_Cubemap", 0))
             m_env_cubemap->bind(0);
 
-		if (m_cubemap_program->set_uniform("s_Prefilter", 1))
+        if (m_cubemap_program->set_uniform("s_Prefilter", 1))
             m_prefilter_cubemap->bind(1);
 
         if (m_cubemap_program->set_uniform("s_SH", 2))
@@ -548,31 +550,31 @@ private:
     {
         DW_SCOPED_SAMPLE("Prefilter");
 
-		m_prefilter_program->use();
+        m_prefilter_program->use();
 
-		if (m_prefilter_program->set_uniform("s_EnvMap", 1))
-			m_env_cubemap->bind(1);
+        if (m_prefilter_program->set_uniform("s_EnvMap", 1))
+            m_env_cubemap->bind(1);
 
-		int32_t start_level = (ENVIRONMENT_MAP_SIZE / PREFILTER_MAP_SIZE) - 1;
-		m_prefilter_program->set_uniform("u_StartMipLevel", start_level);
-        
-		for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
-		{
+        int32_t start_level = (ENVIRONMENT_MAP_SIZE / PREFILTER_MAP_SIZE) - 1;
+        m_prefilter_program->set_uniform("u_StartMipLevel", start_level);
+
+        for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
+        {
             uint32_t mip_width  = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
             uint32_t mip_height = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
-	
-			float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
+
+            float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
             m_prefilter_program->set_uniform("u_Roughness", roughness);
             m_prefilter_program->set_uniform("u_SampleCount", m_sample_count);
             m_prefilter_program->set_uniform("u_Width", float(mip_width));
             m_prefilter_program->set_uniform("u_Height", float(mip_height));
-     
-			m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA32F);
-			
-			glDispatchCompute(mip_width / PREFILTER_WORK_GROUP_SIZE, mip_height / PREFILTER_WORK_GROUP_SIZE, 6);
-		}
 
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+            m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+            glDispatchCompute(mip_width / PREFILTER_WORK_GROUP_SIZE, mip_height / PREFILTER_WORK_GROUP_SIZE, 6);
+        }
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -939,7 +941,7 @@ private:
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
-	float radical_inverse_vdc(uint32_t bits)
+    float radical_inverse_vdc(uint32_t bits)
     {
         bits = (bits << 16u) | (bits >> 16u);
         bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -958,11 +960,36 @@ private:
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
-	void precompute_prefilter_constants()
-	{
-		for (int i = 0; i < m_sample_count; i++)
-		    m_hammersley.push_back(hammersley(i, m_sample_count));
-	}
+    void precompute_prefilter_constants()
+    {
+        m_sample_directions.resize(PREFILTER_MIP_LEVELS);
+
+        for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
+        {
+            uint32_t mip_width  = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
+            uint32_t mip_height = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
+
+            float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
+
+            for (int i = 0; i < m_sample_count; i++)
+            {
+                glm::vec2 Xi = hammersley(i, m_sample_count);
+                float     a  = roughness * roughness;
+
+                float phi      = 2.0 * M_PI * Xi.x;
+                float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+                float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+                // from spherical coordinates to cartesian coordinates - halfway vector
+                glm::vec3 H;
+                H.x = cos(phi) * sin_theta;
+                H.y = sin(phi) * sin_theta;
+                H.z = cos_theta;
+
+				m_sample_directions[mip].push_back(H);
+            }
+        }
+    }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -1010,7 +1037,8 @@ private:
     std::unique_ptr<dw::Camera> m_main_camera;
     std::unique_ptr<dw::Camera> m_debug_camera;
 
-	std::vector<glm::vec2> m_hammersley;
+	// Prefiltering Constants.
+    std::vector<std::vector<glm::vec3>> m_sample_directions;
 
     // Mesh
     dw::Mesh* m_mesh;
