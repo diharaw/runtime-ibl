@@ -357,6 +357,7 @@ private:
 
     bool create_framebuffer()
     {
+		// uint32_t w, uint32_t h, uint32_t array_size, int32_t mip_levels, GLenum internal_format, GLenum format, GLenum type
         m_env_cubemap   = std::make_unique<dw::TextureCube>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
         m_cubemap_depth = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
         m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA32F, GL_RGBA, GL_FLOAT);
@@ -553,14 +554,14 @@ private:
 			m_env_cubemap->bind(1);
 
 		int32_t start_level = (ENVIRONMENT_MAP_SIZE / PREFILTER_MAP_SIZE) - 1;
-        m_prefilter_program->set_uniform("u_StartMipLevel", start_level);
+		m_prefilter_program->set_uniform("u_StartMipLevel", start_level);
         
 		for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
 		{
             uint32_t mip_width  = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
             uint32_t mip_height = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
 	
-			float roughness = (float)mip / (float)((PREFILTER_MIP_LEVELS - 1)-1);
+			float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
             m_prefilter_program->set_uniform("u_Roughness", roughness);
             m_prefilter_program->set_uniform("u_SampleCount", m_sample_count);
             m_prefilter_program->set_uniform("u_Width", float(mip_width));
@@ -569,9 +570,9 @@ private:
 			m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA32F);
 			
 			glDispatchCompute(mip_width / PREFILTER_WORK_GROUP_SIZE, mip_height / PREFILTER_WORK_GROUP_SIZE, 6);
-			
-			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 		}
+
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------

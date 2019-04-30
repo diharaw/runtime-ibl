@@ -202,8 +202,7 @@ void main()
 
     prefiltered_color = prefiltered_color / total_weight;
 
-    ivec3 p = ivec3(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);
-    imageStore(i_Prefiltered, p, vec4(prefiltered_color, 1.0));
+    imageStore(i_Prefiltered, ivec3(gl_GlobalInvocationID), vec4(prefiltered_color, 1.0));
 }
 
 // ------------------------------------------------------------------
