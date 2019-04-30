@@ -3,8 +3,8 @@
 // ------------------------------------------------------------------
 
 #define LOCAL_SIZE 8
-#define ENVIRONMENT_MAP_SIZE 64
-#define SH_INTERMEDIATE_SIZE (ENVIRONMENT_MAP_SIZE / LOCAL_SIZE)
+#define ENVIRONMENT_MAP_SIZE 128
+#define SH_INTERMEDIATE_SIZE 16
 #define NUM_CUBEMAP_FACES 6
 
 const float Pi = 3.141592654;

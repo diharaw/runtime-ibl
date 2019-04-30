@@ -3,9 +3,9 @@
 // ------------------------------------------------------------------
 
 #define LOCAL_SIZE 8
-#define ENVIRONMENT_MAP_SIZE 64
+#define ENVIRONMENT_MAP_SIZE 128
 #define SH_INTERMEDIATE_SIZE (ENVIRONMENT_MAP_SIZE / LOCAL_SIZE)
-#define CUBEMAP_MIP_LEVEL 3.0
+#define CUBEMAP_MIP_LEVEL 2.0
 #define POS_X 0
 #define NEG_X 1
 #define POS_Y 2
