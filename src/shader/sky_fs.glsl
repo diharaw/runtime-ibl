@@ -8,7 +8,7 @@ uniform samplerCube s_Cubemap;
 uniform samplerCube s_Prefilter;
 uniform sampler2D s_SH;
 
-uniform int u_Type;
+uniform int   u_Type;
 uniform float u_Roughness;
 
 const float Pi       = 3.141592654;

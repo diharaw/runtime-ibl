@@ -209,10 +209,10 @@ private:
 
         ImGui::Text("Prefilter Options");
 
-		int sample_count = m_sample_count;
+        int sample_count = m_sample_count;
         ImGui::SliderInt("Sample Count", &m_sample_count, 1, 64);
 
-		if (sample_count != m_sample_count)
+        if (sample_count != m_sample_count)
             precompute_prefilter_constants();
     }
 
@@ -272,7 +272,7 @@ private:
                 return false;
             }
 
-			m_prefilter_program->uniform_block_binding("u_SampleDirections", 0);
+            m_prefilter_program->uniform_block_binding("u_SampleDirections", 0);
         }
 
         {
@@ -982,16 +982,16 @@ private:
 
             float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
 
-			std::vector<glm::vec4> samples;
+            std::vector<glm::vec4> samples;
 
-			samples.resize(MAX_PREFILTER_SAMPLES);
+            samples.resize(MAX_PREFILTER_SAMPLES);
 
             for (int i = 0; i < m_sample_count; i++)
             {
                 glm::vec2 Xi = hammersley(i, m_sample_count);
                 float     a  = roughness * roughness;
 
-                float phi      = 2.0f * M_PI * Xi.x;
+                float phi       = 2.0f * M_PI * Xi.x;
                 float cos_theta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
                 float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
 
@@ -1001,10 +1001,10 @@ private:
                 H.y = sin(phi) * sin_theta;
                 H.z = cos_theta;
 
-				samples[i] = glm::vec4(H, 0.0f);
+                samples[i] = glm::vec4(H, 0.0f);
             }
 
-			m_sample_directions[mip] = std::make_unique<dw::UniformBuffer>(GL_DYNAMIC_DRAW, sizeof(glm::vec4) * MAX_PREFILTER_SAMPLES, samples.data());
+            m_sample_directions[mip] = std::make_unique<dw::UniformBuffer>(GL_DYNAMIC_DRAW, sizeof(glm::vec4) * MAX_PREFILTER_SAMPLES, samples.data());
         }
     }
 
@@ -1054,7 +1054,7 @@ private:
     std::unique_ptr<dw::Camera> m_main_camera;
     std::unique_ptr<dw::Camera> m_debug_camera;
 
-	// Prefiltering Constants.
+    // Prefiltering Constants.
     std::vector<std::unique_ptr<dw::UniformBuffer>> m_sample_directions;
 
     // Mesh
