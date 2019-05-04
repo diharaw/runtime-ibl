@@ -18,7 +18,9 @@
 #define IRRADIANCE_CUBEMAP_SIZE 128
 #define IRRADIANCE_WORK_GROUP_SIZE 8
 #define PREFILTER_WORK_GROUP_SIZE 8
+#define BRDF_WORK_GROUP_SIZE 8
 #define MAX_PREFILTER_SAMPLES 64
+#define BRDF_LUT_SIZE 512
 #define SH_INTERMEDIATE_SIZE (IRRADIANCE_CUBEMAP_SIZE / IRRADIANCE_WORK_GROUP_SIZE)
 
 class RuntimeIBL : public dw::Application
@@ -47,6 +49,7 @@ protected:
         create_cube();
         convert_env_map();
         precompute_prefilter_constants();
+        generate_brdf_lut();
 
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -252,6 +255,27 @@ private:
             }
         }
 
+		{
+            // Create general shaders
+            m_brdf_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/brdf_cs.glsl"));
+
+            if (!m_brdf_cs)
+            {
+                DW_LOG_FATAL("Failed to create Shaders");
+                return false;
+            }
+
+            // Create general shader program
+            dw::Shader* shaders[] = { m_brdf_cs.get() };
+            m_brdf_program   = std::make_unique<dw::Program>(1, shaders);
+
+            if (!m_brdf_program)
+            {
+                DW_LOG_FATAL("Failed to create Shader Program");
+                return false;
+            }
+        }
+
         {
             // Create general shaders
             m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
@@ -372,12 +396,15 @@ private:
         m_cubemap_depth     = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
         m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
         m_sh_intermediate   = std::make_unique<dw::Texture2D>(SH_INTERMEDIATE_SIZE * 9, SH_INTERMEDIATE_SIZE, 6, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        m_brdf_lut          = std::make_unique<dw::Texture2D>(BRDF_LUT_SIZE, BRDF_LUT_SIZE, 1, 1, 1, GL_RG16F, GL_RG, GL_HALF_FLOAT);
+        m_sh                = std::make_unique<dw::Texture2D>(9, 1, 1, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
-        m_sh_intermediate->set_min_filter(GL_NEAREST);
+		m_sh_intermediate->set_min_filter(GL_NEAREST);
         m_sh_intermediate->set_mag_filter(GL_NEAREST);
 
-        m_sh = std::make_unique<dw::Texture2D>(9, 1, 1, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
-
+        m_brdf_lut->set_min_filter(GL_NEAREST);
+        m_brdf_lut->set_mag_filter(GL_NEAREST);
+        
         m_sh->set_min_filter(GL_NEAREST);
         m_sh->set_mag_filter(GL_NEAREST);
 
@@ -455,7 +482,37 @@ private:
         m_mesh_program->set_uniform("u_View", m_main_camera->m_view);
         m_mesh_program->set_uniform("u_Projection", m_main_camera->m_projection);
 
-        // Draw meshes.
+		if (m_mesh_program->set_uniform("s_BRDF", 0))
+            m_brdf_lut->bind(0);
+
+		if (m_mesh_program->set_uniform("s_IrradianceSH", 1))
+			m_sh->bind(1);
+
+		if (m_mesh_program->set_uniform("s_Prefiltered", 2))
+			m_prefilter_cubemap->bind(2);
+
+		if (m_mesh_program->set_uniform("s_Albedo", 3))
+			m_bunny_albedo->bind(3);
+
+		if (m_mesh_program->set_uniform("s_Metallic", 4))
+			m_bunny_metallic->bind(4);
+
+		if (m_mesh_program->set_uniform("s_Roughness", 5))
+			m_bunny_roughness->bind(5);
+
+        // Draw bunny.
+        render_mesh(m_mesh);
+
+		if (m_mesh_program->set_uniform("s_Albedo", 3))
+            m_floor_albedo->bind(3);
+
+        if (m_mesh_program->set_uniform("s_Metallic", 4))
+            m_floor_metallic->bind(4);
+
+        if (m_mesh_program->set_uniform("s_Roughness", 5))
+            m_floor_roughness->bind(5);
+
+		// Draw floor.
         render_mesh(m_mesh);
     }
 
@@ -586,6 +643,19 @@ private:
 
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
+
+	// -----------------------------------------------------------------------------------------------------------------------------------
+
+	void generate_brdf_lut()
+	{
+		m_brdf_program->use();
+
+		m_brdf_lut->bind_image(0, 0, 0, GL_WRITE_ONLY, GL_RG16F);
+
+		glDispatchCompute(BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, 1);
+
+		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+	}
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -1028,6 +1098,15 @@ private:
     std::unique_ptr<dw::TextureCube> m_prefilter_cubemap;
     std::unique_ptr<dw::Texture2D>   m_sh;
     std::unique_ptr<dw::Texture2D>   m_sh_intermediate;
+    std::unique_ptr<dw::Texture2D>   m_brdf_lut;
+
+	std::unique_ptr<dw::Texture2D> m_floor_albedo;
+    std::unique_ptr<dw::Texture2D> m_floor_metallic;
+	std::unique_ptr<dw::Texture2D> m_floor_roughness;
+	
+	std::unique_ptr<dw::Texture2D> m_bunny_albedo;
+    std::unique_ptr<dw::Texture2D> m_bunny_metallic;
+	std::unique_ptr<dw::Texture2D> m_bunny_roughness;
 
     std::unique_ptr<dw::Shader>  m_cubemap_convert_vs;
     std::unique_ptr<dw::Shader>  m_cubemap_convert_fs;
@@ -1049,6 +1128,9 @@ private:
 
     std::unique_ptr<dw::Shader>  m_prefilter_cs;
     std::unique_ptr<dw::Program> m_prefilter_program;
+
+	std::unique_ptr<dw::Shader>  m_brdf_cs;
+    std::unique_ptr<dw::Program> m_brdf_program;
 
     // Camera.
     std::unique_ptr<dw::Camera> m_main_camera;
