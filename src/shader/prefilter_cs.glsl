@@ -10,6 +10,7 @@
 #define POS_Z 4
 #define NEG_Z 5
 #define PI 3.14159265359
+#define MAX_SAMPLES 64
 
 // ------------------------------------------------------------------
 // INPUTS -----------------------------------------------------------
@@ -21,7 +22,16 @@ layout(local_size_x = LOCAL_SIZE, local_size_y = LOCAL_SIZE, local_size_z = 1) i
 // OUTPUTS ----------------------------------------------------------
 // ------------------------------------------------------------------
 
-layout(binding = 0, rgba32f) uniform imageCube i_Prefiltered;
+layout(binding = 0, rgba16f) uniform imageCube i_Prefiltered;
+
+// ------------------------------------------------------------------
+// UNIFORM BUFFERS --------------------------------------------------
+// ------------------------------------------------------------------
+
+layout (std140) uniform u_SampleDirections
+{
+	vec4 sample_directions[MAX_SAMPLES];
+};
 
 // ------------------------------------------------------------------
 // SAMPLERS ---------------------------------------------------------
@@ -110,52 +120,6 @@ float distribution_ggx(vec3 N, vec3 H, float roughness)
     return nom / denom;
 }
 
-// ----------------------------------------------------------------------------
-// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
-// efficient VanDerCorpus calculation.
-
-float radical_inverse_vdc(uint bits) 
-{
-     bits = (bits << 16u) | (bits >> 16u);
-     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-     bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-     bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
-
-// ----------------------------------------------------------------------------
-
-vec2 hammersley(uint i, uint N)
-{
-	return vec2(float(i)/float(N), radical_inverse_vdc(i));
-}
-
-// ----------------------------------------------------------------------------
-
-vec3 importance_sample_ggx(vec2 Xi, vec3 N, float roughness)
-{
-	float a = roughness*roughness;
-	
-	float phi = 2.0 * PI * Xi.x;
-	float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));
-	float sinTheta = sqrt(1.0 - cosTheta*cosTheta);
-	
-	// from spherical coordinates to cartesian coordinates - halfway vector
-	vec3 H;
-	H.x = cos(phi) * sinTheta;
-	H.y = sin(phi) * sinTheta;
-	H.z = cosTheta;
-	
-	// from tangent-space H vector to world-space sample vector
-	vec3 up          = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-	vec3 tangent   = normalize(cross(up, N));
-	vec3 bitangent = cross(N, tangent);
-	
-	vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
-	return normalize(sampleVec);
-}
-
 // ------------------------------------------------------------------
 // MAIN -------------------------------------------------------------
 // ------------------------------------------------------------------
@@ -172,12 +136,18 @@ void main()
 
     vec3 prefiltered_color = vec3(0.0);
     float total_weight = 0.0;
+
+    // Compute a matrix to rotate the samples
+    vec3 up        = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+	vec3 tangent   = normalize(cross(up, N));
+	vec3 bitangent = cross(N, tangent);
+
+    mat3 tangent_to_world = mat3(tangent, bitangent, N);
     
     for(uint i = 0u; i < u_SampleCount; ++i)
     {
         // generates a sample vector that's biased towards the preferred alignment direction (importance sampling).
-        vec2 Xi = hammersley(i, u_SampleCount);
-        vec3 H = importance_sample_ggx(Xi, N, u_Roughness);
+        vec3 H = tangent_to_world * sample_directions[i].xyz;
         vec3 L  = normalize(2.0 * dot(V, H) * H - V);
 
         float NdotL = max(dot(N, L), 0.0);

@@ -18,6 +18,7 @@
 #define IRRADIANCE_CUBEMAP_SIZE 128
 #define IRRADIANCE_WORK_GROUP_SIZE 8
 #define PREFILTER_WORK_GROUP_SIZE 8
+#define MAX_PREFILTER_SAMPLES 64
 #define SH_INTERMEDIATE_SIZE (IRRADIANCE_CUBEMAP_SIZE / IRRADIANCE_WORK_GROUP_SIZE)
 
 class RuntimeIBL : public dw::Application
@@ -45,6 +46,7 @@ protected:
         create_camera();
         create_cube();
         convert_env_map();
+        precompute_prefilter_constants();
 
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
@@ -207,7 +209,11 @@ private:
 
         ImGui::Text("Prefilter Options");
 
-        ImGui::InputInt("Sample Count", &m_sample_count);
+		int sample_count = m_sample_count;
+        ImGui::SliderInt("Sample Count", &m_sample_count, 1, 64);
+
+		if (sample_count != m_sample_count)
+            precompute_prefilter_constants();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -265,6 +271,8 @@ private:
                 DW_LOG_FATAL("Failed to create Shader Program");
                 return false;
             }
+
+			m_prefilter_program->uniform_block_binding("u_SampleDirections", 0);
         }
 
         {
@@ -362,7 +370,7 @@ private:
         // uint32_t w, uint32_t h, uint32_t array_size, int32_t mip_levels, GLenum internal_format, GLenum format, GLenum type
         m_env_cubemap       = std::make_unique<dw::TextureCube>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, GL_RGB16F, GL_RGB, GL_HALF_FLOAT);
         m_cubemap_depth     = std::make_unique<dw::Texture2D>(ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE, 1, 1, 1, GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT);
-        m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        m_prefilter_cubemap = std::make_unique<dw::TextureCube>(PREFILTER_MAP_SIZE, PREFILTER_MAP_SIZE, 1, PREFILTER_MIP_LEVELS, GL_RGBA16F, GL_RGBA, GL_HALF_FLOAT);
         m_sh_intermediate   = std::make_unique<dw::Texture2D>(SH_INTERMEDIATE_SIZE * 9, SH_INTERMEDIATE_SIZE, 6, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
         m_sh_intermediate->set_min_filter(GL_NEAREST);
@@ -560,6 +568,8 @@ private:
 
         for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
         {
+            m_sample_directions[mip]->bind_base(0);
+
             uint32_t mip_width  = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
             uint32_t mip_height = PREFILTER_MAP_SIZE * std::pow(0.5, mip);
 
@@ -569,7 +579,7 @@ private:
             m_prefilter_program->set_uniform("u_Width", float(mip_width));
             m_prefilter_program->set_uniform("u_Height", float(mip_height));
 
-            m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA32F);
+            m_prefilter_cubemap->bind_image(0, mip, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
             glDispatchCompute(mip_width / PREFILTER_WORK_GROUP_SIZE, mip_height / PREFILTER_WORK_GROUP_SIZE, 6);
         }
@@ -962,6 +972,7 @@ private:
 
     void precompute_prefilter_constants()
     {
+        m_sample_directions.clear();
         m_sample_directions.resize(PREFILTER_MIP_LEVELS);
 
         for (int mip = 0; mip < PREFILTER_MIP_LEVELS; mip++)
@@ -971,14 +982,18 @@ private:
 
             float roughness = (float)mip / (float)(PREFILTER_MIP_LEVELS - 1);
 
+			std::vector<glm::vec4> samples;
+
+			samples.resize(MAX_PREFILTER_SAMPLES);
+
             for (int i = 0; i < m_sample_count; i++)
             {
                 glm::vec2 Xi = hammersley(i, m_sample_count);
                 float     a  = roughness * roughness;
 
-                float phi      = 2.0 * M_PI * Xi.x;
-                float cos_theta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
-                float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+                float phi      = 2.0f * M_PI * Xi.x;
+                float cos_theta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
+                float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
 
                 // from spherical coordinates to cartesian coordinates - halfway vector
                 glm::vec3 H;
@@ -986,8 +1001,10 @@ private:
                 H.y = sin(phi) * sin_theta;
                 H.z = cos_theta;
 
-				m_sample_directions[mip].push_back(H);
+				samples[i] = glm::vec4(H, 0.0f);
             }
+
+			m_sample_directions[mip] = std::make_unique<dw::UniformBuffer>(GL_DYNAMIC_DRAW, sizeof(glm::vec4) * MAX_PREFILTER_SAMPLES, samples.data());
         }
     }
 
@@ -1038,7 +1055,7 @@ private:
     std::unique_ptr<dw::Camera> m_debug_camera;
 
 	// Prefiltering Constants.
-    std::vector<std::vector<glm::vec3>> m_sample_directions;
+    std::vector<std::unique_ptr<dw::UniformBuffer>> m_sample_directions;
 
     // Mesh
     dw::Mesh* m_mesh;
