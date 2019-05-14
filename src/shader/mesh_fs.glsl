@@ -142,12 +142,12 @@ vec3 evaluate_sh9_irradiance(in vec3 direction)
 void main()
 {
     // material properties
-    vec3 albedo = texture(s_Albedo, PS_IN_TexCoord).rgb;
+    vec3 albedo = vec3(1.0);//texture(s_Albedo, PS_IN_TexCoord).rgb;
     float metallic = 1.0;//texture(s_Metallic, PS_IN_TexCoord).r;
-    float roughness = 0.5;//texture(s_Roughness, PS_IN_TexCoord).r;
+    float roughness = texture(s_Roughness, PS_IN_TexCoord).r;
 
     // input lighting data
-    vec3 N = normal_from_map();
+    vec3 N = PS_IN_Normal;//normal_from_map();
     vec3 V = normalize(camPos - PS_IN_FragPos);
     vec3 R = reflect(-V, N); 
 

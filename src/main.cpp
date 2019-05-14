@@ -430,6 +430,8 @@ private:
             return false;
         }
 
+		m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker_huge.png", false, true));
+
         return true;
     }
 
@@ -491,11 +493,11 @@ private:
 		if (m_mesh_program->set_uniform("s_Prefiltered", 2))
 			m_prefilter_cubemap->bind(2);
 
-		if (m_mesh_program->set_uniform("s_Albedo", 3))
-			m_bunny_albedo->bind(3);
+		//if (m_mesh_program->set_uniform("s_Albedo", 3))
+		//	m_bunny_albedo->bind(3);
 
-		if (m_mesh_program->set_uniform("s_Metallic", 4))
-			m_bunny_metallic->bind(4);
+		//if (m_mesh_program->set_uniform("s_Metallic", 4))
+		//	m_bunny_metallic->bind(4);
 
 		if (m_mesh_program->set_uniform("s_Roughness", 5))
 			m_bunny_roughness->bind(5);
@@ -503,17 +505,17 @@ private:
         // Draw bunny.
         render_mesh(m_mesh);
 
-		if (m_mesh_program->set_uniform("s_Albedo", 3))
-            m_floor_albedo->bind(3);
+		//if (m_mesh_program->set_uniform("s_Albedo", 3))
+  //          m_floor_albedo->bind(3);
 
-        if (m_mesh_program->set_uniform("s_Metallic", 4))
-            m_floor_metallic->bind(4);
+  //      if (m_mesh_program->set_uniform("s_Metallic", 4))
+  //          m_floor_metallic->bind(4);
 
-        if (m_mesh_program->set_uniform("s_Roughness", 5))
-            m_floor_roughness->bind(5);
+  //      if (m_mesh_program->set_uniform("s_Roughness", 5))
+  //          m_floor_roughness->bind(5);
 
-		// Draw floor.
-        render_mesh(m_mesh);
+		//// Draw floor.
+  //      render_mesh(m_mesh);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------

@@ -6,6 +6,7 @@ layout(location = 4) in vec3 VS_IN_Bitangent;
 
 out vec3 PS_IN_FragPos;
 out vec3 PS_IN_Normal;
+out vec2 PS_IN_TexCoord;
 
 uniform mat4 u_Model;
 uniform mat4 u_View;
@@ -15,6 +16,7 @@ void main()
 {
     vec4 world_pos = u_Model * vec4(VS_IN_Position, 1.0f);
     PS_IN_FragPos  = world_pos.xyz;
+    PS_IN_TexCoord = VS_IN_Texcoord;
 
     mat3 model_mat = mat3(u_Model);
 
