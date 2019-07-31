@@ -99,6 +99,7 @@ protected:
         m_debug_camera->update_projection(60.0f, 0.1f, CAMERA_FAR_PLANE * 2.0f, float(m_width) / float(m_height));
 
         create_framebuffer();
+        convert_env_map();
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -238,7 +239,7 @@ private:
             m_cubemap_convert_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/equirectangular_to_cubemap_vs.glsl"));
             m_cubemap_convert_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/equirectangular_to_cubemap_fs.glsl"));
 
-            if (!m_cubemap_convert_vs || !m_cubemap_convert_fs)
+            if (!m_cubemap_convert_vs->compiled() || !m_cubemap_convert_fs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -259,7 +260,7 @@ private:
             // Create general shaders
             m_brdf_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/brdf_cs.glsl"));
 
-            if (!m_brdf_cs)
+            if (!m_brdf_cs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -280,7 +281,7 @@ private:
             // Create general shaders
             m_prefilter_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/prefilter_cs.glsl"));
 
-            if (!m_prefilter_cs)
+            if (!m_prefilter_cs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -303,7 +304,7 @@ private:
             // Create general shaders
             m_sh_projection_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/sh_projection_cs.glsl"));
 
-            if (!m_sh_projection_cs)
+            if (!m_sh_projection_cs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -324,7 +325,7 @@ private:
             // Create general shaders
             m_sh_add_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/sh_add_cs.glsl"));
 
-            if (!m_sh_add_cs)
+            if (!m_sh_add_cs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -341,33 +342,33 @@ private:
             }
         }
 
-        {
-            // Create general shaders
-            m_mesh_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/mesh_vs.glsl"));
-            m_mesh_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/mesh_fs.glsl"));
+        //{
+        //    // Create general shaders
+        //    m_mesh_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/mesh_vs.glsl"));
+        //    m_mesh_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/mesh_fs.glsl"));
 
-            if (!m_mesh_vs || !m_mesh_fs)
-            {
-                DW_LOG_FATAL("Failed to create Shaders");
-                return false;
-            }
+        //    if (!m_mesh_vs->compiled() || !m_mesh_fs->compiled())
+        //    {
+        //        DW_LOG_FATAL("Failed to create Shaders");
+        //        return false;
+        //    }
 
-            // Create general shader program
-            dw::Shader* shaders[] = { m_mesh_vs.get(), m_mesh_fs.get() };
-            m_mesh_program        = std::make_unique<dw::Program>(2, shaders);
+        //    // Create general shader program
+        //    dw::Shader* shaders[] = { m_mesh_vs.get(), m_mesh_fs.get() };
+        //    m_mesh_program        = std::make_unique<dw::Program>(2, shaders);
 
-            if (!m_mesh_program)
-            {
-                DW_LOG_FATAL("Failed to create Shader Program");
-                return false;
-            }
-        }
+        //    if (!m_mesh_program)
+        //    {
+        //        DW_LOG_FATAL("Failed to create Shader Program");
+        //        return false;
+        //    }
+        //}
 
         {
             m_cubemap_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/sky_vs.glsl"));
             m_cubemap_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/sky_fs.glsl"));
 
-            if (!m_cubemap_vs || !m_cubemap_fs)
+            if (!m_cubemap_vs->compiled() || !m_cubemap_fs->compiled())
             {
                 DW_LOG_FATAL("Failed to create Shaders");
                 return false;
@@ -477,7 +478,7 @@ private:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Bind shader program.
-        m_mesh_program->use();
+        /*m_mesh_program->use();
 
         glm::mat4 m = glm::mat4(1.0f);
         m_mesh_program->set_uniform("u_Model", glm::scale(m, glm::vec3(0.5f)));
@@ -491,7 +492,7 @@ private:
 			m_sh->bind(1);
 
 		if (m_mesh_program->set_uniform("s_Prefiltered", 2))
-			m_prefilter_cubemap->bind(2);
+			m_prefilter_cubemap->bind(2);*/
 
 		//if (m_mesh_program->set_uniform("s_Albedo", 3))
 		//	m_bunny_albedo->bind(3);
@@ -499,11 +500,11 @@ private:
 		//if (m_mesh_program->set_uniform("s_Metallic", 4))
 		//	m_bunny_metallic->bind(4);
 
-		if (m_mesh_program->set_uniform("s_Roughness", 5))
-			m_bunny_roughness->bind(5);
+		//if (m_mesh_program->set_uniform("s_Roughness", 5))
+		//	m_bunny_roughness->bind(5);
 
         // Draw bunny.
-        render_mesh(m_mesh);
+        //render_mesh(m_mesh);
 
 		//if (m_mesh_program->set_uniform("s_Albedo", 3))
   //          m_floor_albedo->bind(3);

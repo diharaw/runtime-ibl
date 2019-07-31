@@ -143,7 +143,7 @@ void main()
     vec2 tex_coord = vec2(float(gl_GlobalInvocationID.x), float(gl_GlobalInvocationID.y)) / float(BRDF_LUT_SIZE - 1);
     vec2 brdf = integrate_brdf(tex_coord.x, tex_coord.y);
 
-    imageStore(i_BRDF, gl_GlobalInvocationID.xy, vec4(brdf, 0.0, 0.0));
+    imageStore(i_BRDF, ivec2(gl_GlobalInvocationID.xy), vec4(brdf, 0.0, 0.0));
 }
 
 // ------------------------------------------------------------------
