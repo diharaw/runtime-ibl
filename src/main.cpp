@@ -163,6 +163,9 @@ protected:
         if (!create_framebuffer())
             return false;
 
+		if (!m_model.initialize())
+            return false;
+
         // Create camera.
         create_camera();
         create_cube();
@@ -302,11 +305,11 @@ private:
 
     void ui()
     {
-        static const char* items[] = { "Environment Map", "Irradiance", "Prefiltered" };
+        static const char* items[] = { "Environment Map", "Irradiance", "Prefiltered", "Sky" };
 
         if (ImGui::BeginCombo("Skybox", items[m_type], 0))
         {
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 bool is_selected = (m_type == i);
 
@@ -658,6 +661,7 @@ private:
         m_cubemap_program->set_uniform("u_Type", m_type);
         m_cubemap_program->set_uniform("u_View", m_main_camera->m_view);
         m_cubemap_program->set_uniform("u_Projection", m_main_camera->m_projection);
+        m_cubemap_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 
         if (m_cubemap_program->set_uniform("s_Cubemap", 0))
             m_env_cubemap->bind(0);
@@ -667,6 +671,8 @@ private:
 
         if (m_cubemap_program->set_uniform("s_SH", 2))
             m_sh->bind(2);
+
+		m_model.set_render_uniforms(m_cubemap_program.get());
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -1260,6 +1266,8 @@ private:
 
     // Prefiltering Constants.
     std::vector<std::unique_ptr<dw::UniformBuffer>> m_sample_directions;
+
+	SkyModel m_model;
 
     // Mesh
     dw::Mesh* m_mesh;
