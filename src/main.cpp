@@ -38,12 +38,13 @@ struct SkyModel
     const int INSCATTER_NU   = 8;
 
     glm::vec3	   m_beta_r        = glm::vec3(0.0058f, 0.0135f, 0.0331f);
-    glm::vec3      m_direction     = glm::vec3(0.0f, -1.0f, 0.0f);
+    glm::vec3      m_direction     = glm::vec3(0.0f, 0.0f, 1.0f);
     float		   m_mie_g         = 0.75f;
     float		   m_sun_intensity = 100.0f;
     dw::Texture2D* m_transmittance_t;
     dw::Texture2D* m_irradiance_t;
     dw::Texture3D* m_inscatter_t;
+    float          m_sun_angle = 0.0f;
 
 	bool initialize()
     {
@@ -107,20 +108,22 @@ struct SkyModel
 
 	void set_render_uniforms(dw::Program* program)
     {
+        m_direction = glm::normalize(glm::vec3(0.0f, sin(m_sun_angle), cos(m_sun_angle)));
+
         program->set_uniform("betaR", m_beta_r / SCALE);
         program->set_uniform("mieG", m_mie_g);
         program->set_uniform("SUN_INTENSITY", m_sun_intensity);
         program->set_uniform("EARTH_POS", glm::vec3(0.0f, 6360010.0f, 0.0f));
-        program->set_uniform("SUN_DIR", m_direction * 1.0f);
+        program->set_uniform("SUN_DIR", m_direction * -1.0f);
 
-        if (program->set_uniform("s_Transmittance", 0))
-            m_transmittance_t->bind(0);
+        if (program->set_uniform("s_Transmittance", 3))
+            m_transmittance_t->bind(3);
 
-        if (program->set_uniform("s_Irradiance", 1))
-            m_irradiance_t->bind(1);
+        if (program->set_uniform("s_Irradiance", 4))
+            m_irradiance_t->bind(4);
 
-        if (program->set_uniform("s_Inscatter", 2))
-            m_inscatter_t->bind(2);
+        if (program->set_uniform("s_Inscatter", 5))
+            m_inscatter_t->bind(5);
     }
 
 	dw::Texture2D* new_texture_2d(int width, int height)
@@ -321,6 +324,9 @@ private:
 
             ImGui::EndCombo();
         }
+
+		if (m_type == 3)
+            ImGui::SliderAngle("Sun Angle", &m_model.m_sun_angle, 0.0f, -180.0f);
 
         if (m_type == 2)
             ImGui::SliderFloat("Roughness", &m_roughness, 0, PREFILTER_MIP_LEVELS - 1);
@@ -645,6 +651,8 @@ private:
 
     void render_skybox()
     {
+        
+
         DW_SCOPED_SAMPLE("Render Skybox");
 
         glEnable(GL_DEPTH_TEST);
