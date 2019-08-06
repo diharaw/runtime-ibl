@@ -23,6 +23,125 @@
 #define BRDF_LUT_SIZE 512
 #define SH_INTERMEDIATE_SIZE (IRRADIANCE_CUBEMAP_SIZE / IRRADIANCE_WORK_GROUP_SIZE)
 
+struct SkyModel
+{
+    const float	SCALE           = 1000.0f;
+    const int   TRANSMITTANCE_W = 256;
+    const int   TRANSMITTANCE_H = 64;
+
+    const int IRRADIANCE_W = 64;
+    const int IRRADIANCE_H = 16;
+
+    const int INSCATTER_R    = 32;
+    const int INSCATTER_MU   = 128;
+    const int INSCATTER_MU_S = 32;
+    const int INSCATTER_NU   = 8;
+
+    glm::vec3	   m_beta_r        = glm::vec3(0.0058f, 0.0135f, 0.0331f);
+    glm::vec3      m_direction     = glm::vec3(0.0f, -1.0f, 0.0f);
+    float		   m_mie_g         = 0.75f;
+    float		   m_sun_intensity = 100.0f;
+    dw::Texture2D* m_transmittance_t;
+    dw::Texture2D* m_irradiance_t;
+    dw::Texture3D* m_inscatter_t;
+
+	bool initialize()
+    {
+        m_transmittance_t = new_texture_2d(TRANSMITTANCE_W, TRANSMITTANCE_H);
+        m_irradiance_t = new_texture_2d(IRRADIANCE_W, IRRADIANCE_H);
+        m_inscatter_t = new_texture_3d(INSCATTER_MU_S * INSCATTER_NU, INSCATTER_MU, INSCATTER_R);
+
+        FILE* transmittance = fopen("transmittance.raw", "r");
+
+        if (transmittance)
+        {
+            size_t n = sizeof(float) * TRANSMITTANCE_W * TRANSMITTANCE_H * 4;
+
+            void* data = malloc(n);
+            fread(data, n, 1, transmittance);
+
+            m_transmittance_t->set_data(0, 0, data);
+
+            fclose(transmittance);
+            free(data);
+        }
+        else
+            return false;
+
+        FILE* irradiance = fopen("irradiance.raw", "r");
+
+        if (irradiance)
+        {
+            size_t n = sizeof(float) * IRRADIANCE_W * IRRADIANCE_H * 4;
+
+            void* data = malloc(n);
+            fread(data, n, 1, irradiance);
+
+            m_irradiance_t->set_data(0, 0, data);
+
+            fclose(irradiance);
+            free(data);
+        }
+        else
+            return false;
+
+        FILE* inscatter = fopen("inscatter.raw", "r");
+
+        if (inscatter)
+        {
+            size_t n = sizeof(float) * INSCATTER_MU_S * INSCATTER_NU * INSCATTER_MU * INSCATTER_R * 4;
+
+            void* data = malloc(n);
+            fread(data, n, 1, inscatter);
+
+            m_inscatter_t->set_data(0, data);
+
+            fclose(inscatter);
+            free(data);
+        }
+        else
+            return false;
+
+        return true;
+    }
+
+	void set_render_uniforms(dw::Program* program)
+    {
+        program->set_uniform("betaR", m_beta_r / SCALE);
+        program->set_uniform("mieG", m_mie_g);
+        program->set_uniform("SUN_INTENSITY", m_sun_intensity);
+        program->set_uniform("EARTH_POS", glm::vec3(0.0f, 6360010.0f, 0.0f));
+        program->set_uniform("SUN_DIR", m_direction * 1.0f);
+
+        if (program->set_uniform("s_Transmittance", 0))
+            m_transmittance_t->bind(0);
+
+        if (program->set_uniform("s_Irradiance", 1))
+            m_irradiance_t->bind(1);
+
+        if (program->set_uniform("s_Inscatter", 2))
+            m_inscatter_t->bind(2);
+    }
+
+	dw::Texture2D* new_texture_2d(int width, int height)
+    {
+        dw::Texture2D* texture = new dw::Texture2D(width, height, 1, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        texture->set_min_filter(GL_LINEAR);
+        texture->set_wrapping(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+        return texture;
+    }
+
+    dw::Texture3D* new_texture_3d(int width, int height, int depth)
+    {
+        dw::Texture3D* texture = new dw::Texture3D(width, height, depth, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+        texture->set_min_filter(GL_LINEAR);
+        texture->set_wrapping(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+
+        return texture;
+    }
+};
+
 class RuntimeIBL : public dw::Application
 {
 protected:
