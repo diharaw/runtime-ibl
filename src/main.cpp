@@ -193,6 +193,8 @@ protected:
         if (m_show_gui)
             ui();
 
+		render_envmap();
+
         compute_spherical_harmonics();
 
         prefilter_cubemap();
@@ -513,6 +515,27 @@ private:
             }
         }
 
+		{
+            m_sky_envmap_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/sky_envmap_vs.glsl"));
+            m_sky_envmap_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/sky_envmap_fs.glsl"));
+
+            if (!m_sky_envmap_vs->compiled() || !m_sky_envmap_fs->compiled())
+            {
+                DW_LOG_FATAL("Failed to create Shaders");
+                return false;
+            }
+
+            // Create general shader program
+            dw::Shader* shaders[] = { m_sky_envmap_vs.get(), m_sky_envmap_fs.get() };
+            m_sky_envmap_program     = std::make_unique<dw::Program>(2, shaders);
+
+            if (!m_sky_envmap_program)
+            {
+                DW_LOG_FATAL("Failed to create Shader Program");
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -649,10 +672,30 @@ private:
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
+	void render_envmap()
+	{
+		m_model.set_render_uniforms(m_cubemap_program.get());
+
+		for (int i = 0; i < 6; i++)
+		{
+		    m_sky_envmap_program->set_uniform("view_projection", m_capture_views[i]);
+		
+		    m_cubemap_fbos[i]->bind();
+            glViewport(0, 0, ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE);
+		
+		    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		    m_cube_vao->bind();
+		
+		    glDrawArrays(GL_TRIANGLES, 0, 36);
+		}
+	}
+       
+	// -----------------------------------------------------------------------------------------------------------------------------------
+
     void render_skybox()
     {
-        
-
         DW_SCOPED_SAMPLE("Render Skybox");
 
         glEnable(GL_DEPTH_TEST);
@@ -703,6 +746,7 @@ private:
 
             m_cubemap_convert_program->set_uniform("u_Projection", m_capture_projection);
             m_cubemap_convert_program->set_uniform("u_View", m_capture_views[i]);
+            m_cubemap_convert_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 
             if (m_cubemap_convert_program->set_uniform("s_EnvMap", 0))
                 m_env_map->bind(0);
@@ -1251,6 +1295,10 @@ private:
     std::unique_ptr<dw::Shader>  m_cubemap_vs;
     std::unique_ptr<dw::Shader>  m_cubemap_fs;
     std::unique_ptr<dw::Program> m_cubemap_program;
+
+	std::unique_ptr<dw::Shader>  m_sky_envmap_vs;
+    std::unique_ptr<dw::Shader>  m_sky_envmap_fs;
+    std::unique_ptr<dw::Program> m_sky_envmap_program;
 
     std::unique_ptr<dw::Shader>  m_mesh_vs;
     std::unique_ptr<dw::Shader>  m_mesh_fs;
