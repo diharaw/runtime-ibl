@@ -296,8 +296,8 @@ protected:
         settings.maximized    = false;
         settings.refresh_rate = 60;
         settings.major_ver    = 4;
-        settings.width        = 1280;
-        settings.height       = 720;
+        settings.width        = 1920;
+        settings.height       = 1080;
         settings.title        = "Runtime IBL";
 
         return settings;
@@ -310,11 +310,11 @@ private:
 
     void ui()
     {
-        static const char* items[] = { "Environment Map", "Irradiance", "Prefiltered", "Sky" };
+        static const char* items[] = { "Environment Map", "Irradiance", "Prefiltered" };
 
         if (ImGui::BeginCombo("Skybox", items[m_type], 0))
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 3; i++)
             {
                 bool is_selected = (m_type == i);
 
@@ -327,7 +327,7 @@ private:
             ImGui::EndCombo();
         }
 
-		if (m_type == 3)
+		if (m_type == 0)
             ImGui::SliderAngle("Sun Angle", &m_model.m_sun_angle, 0.0f, -180.0f);
 
         if (m_type == 2)
@@ -674,11 +674,14 @@ private:
 
 	void render_envmap()
 	{
-		m_model.set_render_uniforms(m_cubemap_program.get());
+        m_sky_envmap_program->use();
+		m_model.set_render_uniforms(m_sky_envmap_program.get());
 
 		for (int i = 0; i < 6; i++)
 		{
-		    m_sky_envmap_program->set_uniform("view_projection", m_capture_views[i]);
+            m_sky_envmap_program->set_uniform("u_Projection", m_capture_projection);
+            m_sky_envmap_program->set_uniform("u_View", m_capture_views[i]);
+            m_sky_envmap_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 		
 		    m_cubemap_fbos[i]->bind();
             glViewport(0, 0, ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE);
@@ -722,8 +725,6 @@ private:
 
         if (m_cubemap_program->set_uniform("s_SH", 2))
             m_sh->bind(2);
-
-		m_model.set_render_uniforms(m_cubemap_program.get());
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 

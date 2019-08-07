@@ -1,5 +1,3 @@
-#include <atmosphere.glsl>
-
 #define SH_DEBUG
 
 out vec3 PS_OUT_Color;
@@ -133,20 +131,6 @@ void main()
     }
     else if (u_Type == 2) // Prefilter
         env_color = textureLod(s_Prefilter, FS_IN_WorldPos, u_Roughness).rgb;
-    else if (u_Type == 3) // Sky 
-    {
-        vec3 dir = normalize(FS_IN_WorldPos);
-
-        float sun = step(cos(M_PI / 360.0), dot(dir, SUN_DIR));
-                        
-        vec3 sunColor = vec3(sun,sun,sun) * SUN_INTENSITY;
-
-        vec3 extinction;
-        vec3 inscatter = SkyRadiance(u_CameraPos, dir, extinction);
-        vec3 col = sunColor * extinction + inscatter;
-
-        env_color = col;
-    }
 
     // HDR tonemap and gamma correct
     env_color = env_color / (env_color + vec3(1.0));
