@@ -327,8 +327,7 @@ private:
             ImGui::EndCombo();
         }
 
-		if (m_type == 0)
-            ImGui::SliderAngle("Sun Angle", &m_model.m_sun_angle, 0.0f, -180.0f);
+        ImGui::SliderAngle("Sun Angle", &m_model.m_sun_angle, 0.0f, -180.0f);
 
         if (m_type == 2)
             ImGui::SliderFloat("Roughness", &m_roughness, 0, PREFILTER_MIP_LEVELS - 1);
@@ -693,6 +692,8 @@ private:
 		
 		    glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
+
+		m_env_cubemap->generate_mipmaps();
 	}
        
 	// -----------------------------------------------------------------------------------------------------------------------------------
