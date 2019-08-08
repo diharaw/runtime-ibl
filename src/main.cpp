@@ -25,7 +25,7 @@
 
 struct SkyModel
 {
-    const float	SCALE           = 1000.0f;
+    const float SCALE           = 1000.0f;
     const int   TRANSMITTANCE_W = 256;
     const int   TRANSMITTANCE_H = 64;
 
@@ -37,20 +37,20 @@ struct SkyModel
     const int INSCATTER_MU_S = 32;
     const int INSCATTER_NU   = 8;
 
-    glm::vec3	   m_beta_r        = glm::vec3(0.0058f, 0.0135f, 0.0331f);
+    glm::vec3      m_beta_r        = glm::vec3(0.0058f, 0.0135f, 0.0331f);
     glm::vec3      m_direction     = glm::vec3(0.0f, 0.0f, 1.0f);
-    float		   m_mie_g         = 0.75f;
-    float		   m_sun_intensity = 100.0f;
+    float          m_mie_g         = 0.75f;
+    float          m_sun_intensity = 100.0f;
     dw::Texture2D* m_transmittance_t;
     dw::Texture2D* m_irradiance_t;
     dw::Texture3D* m_inscatter_t;
     float          m_sun_angle = 0.0f;
 
-	bool initialize()
+    bool initialize()
     {
         m_transmittance_t = new_texture_2d(TRANSMITTANCE_W, TRANSMITTANCE_H);
-        m_irradiance_t = new_texture_2d(IRRADIANCE_W, IRRADIANCE_H);
-        m_inscatter_t = new_texture_3d(INSCATTER_MU_S * INSCATTER_NU, INSCATTER_MU, INSCATTER_R);
+        m_irradiance_t    = new_texture_2d(IRRADIANCE_W, IRRADIANCE_H);
+        m_inscatter_t     = new_texture_3d(INSCATTER_MU_S * INSCATTER_NU, INSCATTER_MU, INSCATTER_R);
 
         FILE* transmittance = fopen("transmittance.raw", "r");
 
@@ -106,7 +106,7 @@ struct SkyModel
         return true;
     }
 
-	void set_render_uniforms(dw::Program* program)
+    void set_render_uniforms(dw::Program* program)
     {
         m_direction = glm::normalize(glm::vec3(0.0f, sin(m_sun_angle), cos(m_sun_angle)));
 
@@ -126,7 +126,7 @@ struct SkyModel
             m_inscatter_t->bind(5);
     }
 
-	dw::Texture2D* new_texture_2d(int width, int height)
+    dw::Texture2D* new_texture_2d(int width, int height)
     {
         dw::Texture2D* texture = new dw::Texture2D(width, height, 1, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
         texture->set_min_filter(GL_LINEAR);
@@ -166,7 +166,7 @@ protected:
         if (!create_framebuffer())
             return false;
 
-		if (!m_model.initialize())
+        if (!m_model.initialize())
             return false;
 
         // Create camera.
@@ -193,7 +193,7 @@ protected:
         if (m_show_gui)
             ui();
 
-		render_envmap();
+        render_envmap();
 
         compute_spherical_harmonics();
 
@@ -385,7 +385,7 @@ private:
             }
         }
 
-		{
+        {
             // Create general shaders
             m_brdf_cs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_COMPUTE_SHADER, "shader/brdf_cs.glsl"));
 
@@ -397,7 +397,7 @@ private:
 
             // Create general shader program
             dw::Shader* shaders[] = { m_brdf_cs.get() };
-            m_brdf_program   = std::make_unique<dw::Program>(1, shaders);
+            m_brdf_program        = std::make_unique<dw::Program>(1, shaders);
 
             if (!m_brdf_program)
             {
@@ -471,27 +471,27 @@ private:
             }
         }
 
-        //{
-        //    // Create general shaders
-        //    m_mesh_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/mesh_vs.glsl"));
-        //    m_mesh_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/mesh_fs.glsl"));
+        {
+            // Create general shaders
+            m_mesh_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/mesh_vs.glsl"));
+            m_mesh_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/mesh_fs.glsl"));
 
-        //    if (!m_mesh_vs->compiled() || !m_mesh_fs->compiled())
-        //    {
-        //        DW_LOG_FATAL("Failed to create Shaders");
-        //        return false;
-        //    }
+            if (!m_mesh_vs->compiled() || !m_mesh_fs->compiled())
+            {
+                DW_LOG_FATAL("Failed to create Shaders");
+                return false;
+            }
 
-        //    // Create general shader program
-        //    dw::Shader* shaders[] = { m_mesh_vs.get(), m_mesh_fs.get() };
-        //    m_mesh_program        = std::make_unique<dw::Program>(2, shaders);
+            // Create general shader program
+            dw::Shader* shaders[] = { m_mesh_vs.get(), m_mesh_fs.get() };
+            m_mesh_program        = std::make_unique<dw::Program>(2, shaders);
 
-        //    if (!m_mesh_program)
-        //    {
-        //        DW_LOG_FATAL("Failed to create Shader Program");
-        //        return false;
-        //    }
-        //}
+            if (!m_mesh_program)
+            {
+                DW_LOG_FATAL("Failed to create Shader Program");
+                return false;
+            }
+        }
 
         {
             m_cubemap_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/sky_vs.glsl"));
@@ -514,7 +514,7 @@ private:
             }
         }
 
-		{
+        {
             m_sky_envmap_vs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_VERTEX_SHADER, "shader/sky_envmap_vs.glsl"));
             m_sky_envmap_fs = std::unique_ptr<dw::Shader>(dw::Shader::create_from_file(GL_FRAGMENT_SHADER, "shader/sky_envmap_fs.glsl"));
 
@@ -526,7 +526,7 @@ private:
 
             // Create general shader program
             dw::Shader* shaders[] = { m_sky_envmap_vs.get(), m_sky_envmap_fs.get() };
-            m_sky_envmap_program     = std::make_unique<dw::Program>(2, shaders);
+            m_sky_envmap_program  = std::make_unique<dw::Program>(2, shaders);
 
             if (!m_sky_envmap_program)
             {
@@ -550,12 +550,12 @@ private:
         m_brdf_lut          = std::make_unique<dw::Texture2D>(BRDF_LUT_SIZE, BRDF_LUT_SIZE, 1, 1, 1, GL_RG16F, GL_RG, GL_HALF_FLOAT);
         m_sh                = std::make_unique<dw::Texture2D>(9, 1, 1, 1, 1, GL_RGBA32F, GL_RGBA, GL_FLOAT);
 
-		m_sh_intermediate->set_min_filter(GL_NEAREST);
+        m_sh_intermediate->set_min_filter(GL_NEAREST);
         m_sh_intermediate->set_mag_filter(GL_NEAREST);
 
         m_brdf_lut->set_min_filter(GL_NEAREST);
         m_brdf_lut->set_mag_filter(GL_NEAREST);
-        
+
         m_sh->set_min_filter(GL_NEAREST);
         m_sh->set_mag_filter(GL_NEAREST);
 
@@ -581,7 +581,7 @@ private:
             return false;
         }
 
-		m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker_huge.png", false, true));
+        m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker_huge.png", false, true));
 
         return true;
     }
@@ -628,75 +628,76 @@ private:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Bind shader program.
-        /*m_mesh_program->use();
+        m_mesh_program->use();
 
         glm::mat4 m = glm::mat4(1.0f);
         m_mesh_program->set_uniform("u_Model", glm::scale(m, glm::vec3(0.5f)));
         m_mesh_program->set_uniform("u_View", m_main_camera->m_view);
         m_mesh_program->set_uniform("u_Projection", m_main_camera->m_projection);
+        m_mesh_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 
 		if (m_mesh_program->set_uniform("s_BRDF", 0))
-            m_brdf_lut->bind(0);
+			m_brdf_lut->bind(0);
 
-		if (m_mesh_program->set_uniform("s_IrradianceSH", 1))
-			m_sh->bind(1);
+        if (m_mesh_program->set_uniform("s_IrradianceSH", 1))
+            m_sh->bind(1);
 
-		if (m_mesh_program->set_uniform("s_Prefiltered", 2))
-			m_prefilter_cubemap->bind(2);*/
+        if (m_mesh_program->set_uniform("s_Prefiltered", 2))
+            m_prefilter_cubemap->bind(2);
 
-		//if (m_mesh_program->set_uniform("s_Albedo", 3))
-		//	m_bunny_albedo->bind(3);
+        if (m_mesh_program->set_uniform("s_Albedo", 3))
+            m_bunny_albedo->bind(3);
 
-		//if (m_mesh_program->set_uniform("s_Metallic", 4))
-		//	m_bunny_metallic->bind(4);
+        if (m_mesh_program->set_uniform("s_Metallic", 4))
+            m_bunny_metallic->bind(4);
 
-		//if (m_mesh_program->set_uniform("s_Roughness", 5))
-		//	m_bunny_roughness->bind(5);
+        if (m_mesh_program->set_uniform("s_Roughness", 5))
+            m_bunny_roughness->bind(5);
 
         // Draw bunny.
-        //render_mesh(m_mesh);
+        render_mesh(m_mesh);
 
-		//if (m_mesh_program->set_uniform("s_Albedo", 3))
-  //          m_floor_albedo->bind(3);
+        //if (m_mesh_program->set_uniform("s_Albedo", 3))
+        //          m_floor_albedo->bind(3);
 
-  //      if (m_mesh_program->set_uniform("s_Metallic", 4))
-  //          m_floor_metallic->bind(4);
+        //      if (m_mesh_program->set_uniform("s_Metallic", 4))
+        //          m_floor_metallic->bind(4);
 
-  //      if (m_mesh_program->set_uniform("s_Roughness", 5))
-  //          m_floor_roughness->bind(5);
+        //      if (m_mesh_program->set_uniform("s_Roughness", 5))
+        //          m_floor_roughness->bind(5);
 
-		//// Draw floor.
-  //      render_mesh(m_mesh);
+        //// Draw floor.
+        //      render_mesh(m_mesh);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
-	void render_envmap()
-	{
+    void render_envmap()
+    {
         m_sky_envmap_program->use();
-		m_model.set_render_uniforms(m_sky_envmap_program.get());
+        m_model.set_render_uniforms(m_sky_envmap_program.get());
 
-		for (int i = 0; i < 6; i++)
-		{
+        for (int i = 0; i < 6; i++)
+        {
             m_sky_envmap_program->set_uniform("u_Projection", m_capture_projection);
             m_sky_envmap_program->set_uniform("u_View", m_capture_views[i]);
             m_sky_envmap_program->set_uniform("u_CameraPos", m_main_camera->m_position);
-		
-		    m_cubemap_fbos[i]->bind();
-            glViewport(0, 0, ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE);
-		
-		    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
-		    m_cube_vao->bind();
-		
-		    glDrawArrays(GL_TRIANGLES, 0, 36);
-		}
 
-		m_env_cubemap->generate_mipmaps();
-	}
-       
-	// -----------------------------------------------------------------------------------------------------------------------------------
+            m_cubemap_fbos[i]->bind();
+            glViewport(0, 0, ENVIRONMENT_MAP_SIZE, ENVIRONMENT_MAP_SIZE);
+
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            m_cube_vao->bind();
+
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+
+        m_env_cubemap->generate_mipmaps();
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------------------------
 
     void render_skybox()
     {
@@ -826,18 +827,18 @@ private:
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
 
-	// -----------------------------------------------------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------------------------
 
-	void generate_brdf_lut()
-	{
-		m_brdf_program->use();
+    void generate_brdf_lut()
+    {
+        m_brdf_program->use();
 
-		m_brdf_lut->bind_image(0, 0, 0, GL_WRITE_ONLY, GL_RG16F);
+        m_brdf_lut->bind_image(0, 0, 0, GL_WRITE_ONLY, GL_RG16F);
 
-		glDispatchCompute(BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, 1);
+        glDispatchCompute(BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, BRDF_LUT_SIZE / BRDF_WORK_GROUP_SIZE, 1);
 
-		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-	}
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -1282,13 +1283,13 @@ private:
     std::unique_ptr<dw::Texture2D>   m_sh_intermediate;
     std::unique_ptr<dw::Texture2D>   m_brdf_lut;
 
-	std::unique_ptr<dw::Texture2D> m_floor_albedo;
+    std::unique_ptr<dw::Texture2D> m_floor_albedo;
     std::unique_ptr<dw::Texture2D> m_floor_metallic;
-	std::unique_ptr<dw::Texture2D> m_floor_roughness;
-	
-	std::unique_ptr<dw::Texture2D> m_bunny_albedo;
+    std::unique_ptr<dw::Texture2D> m_floor_roughness;
+
+    std::unique_ptr<dw::Texture2D> m_bunny_albedo;
     std::unique_ptr<dw::Texture2D> m_bunny_metallic;
-	std::unique_ptr<dw::Texture2D> m_bunny_roughness;
+    std::unique_ptr<dw::Texture2D> m_bunny_roughness;
 
     std::unique_ptr<dw::Shader>  m_cubemap_convert_vs;
     std::unique_ptr<dw::Shader>  m_cubemap_convert_fs;
@@ -1298,7 +1299,7 @@ private:
     std::unique_ptr<dw::Shader>  m_cubemap_fs;
     std::unique_ptr<dw::Program> m_cubemap_program;
 
-	std::unique_ptr<dw::Shader>  m_sky_envmap_vs;
+    std::unique_ptr<dw::Shader>  m_sky_envmap_vs;
     std::unique_ptr<dw::Shader>  m_sky_envmap_fs;
     std::unique_ptr<dw::Program> m_sky_envmap_program;
 
@@ -1315,7 +1316,7 @@ private:
     std::unique_ptr<dw::Shader>  m_prefilter_cs;
     std::unique_ptr<dw::Program> m_prefilter_program;
 
-	std::unique_ptr<dw::Shader>  m_brdf_cs;
+    std::unique_ptr<dw::Shader>  m_brdf_cs;
     std::unique_ptr<dw::Program> m_brdf_program;
 
     // Camera.
@@ -1325,7 +1326,7 @@ private:
     // Prefiltering Constants.
     std::vector<std::unique_ptr<dw::UniformBuffer>> m_sample_directions;
 
-	SkyModel m_model;
+    SkyModel m_model;
 
     // Mesh
     dw::Mesh* m_mesh;

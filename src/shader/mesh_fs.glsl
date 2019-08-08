@@ -18,6 +18,8 @@ uniform sampler2D s_BRDF;
 uniform sampler2D s_IrradianceSH;
 uniform samplerCube s_Prefiltered;
 
+uniform vec3 u_CameraPos;
+
 struct SH9
 {
     float c[9];
@@ -32,7 +34,7 @@ struct SH9Color
 
 vec3 normal_from_map()
 {
-    vec3 tangentNormal = texture(normalMap, PS_IN_TexCoord).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(s_Normal, PS_IN_TexCoord).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(PS_IN_FragPos);
     vec3 Q2  = dFdy(PS_IN_FragPos);
@@ -56,7 +58,7 @@ float distribution_ggx(vec3 N, vec3 H, float roughness)
 
     float nom   = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
+    denom = Pi * denom * denom;
 
     return nom / denom;
 }
@@ -142,22 +144,22 @@ vec3 evaluate_sh9_irradiance(in vec3 direction)
 void main()
 {
     // material properties
-    vec3 albedo = vec3(1.0);//texture(s_Albedo, PS_IN_TexCoord).rgb;
-    float metallic = 1.0;//texture(s_Metallic, PS_IN_TexCoord).r;
-    float roughness = texture(s_Roughness, PS_IN_TexCoord).r;
+    // vec3 albedo = vec3(1.0);//texture(s_Albedo, PS_IN_TexCoord).rgb;
+    // float metallic = 1.0;//texture(s_Metallic, PS_IN_TexCoord).r;
+    // float roughness = texture(s_Roughness, PS_IN_TexCoord).r;
 
     // input lighting data
-    vec3 N = PS_IN_Normal;//normal_from_map();
-    vec3 V = normalize(camPos - PS_IN_FragPos);
-    vec3 R = reflect(-V, N); 
+    // vec3 N = PS_IN_Normal;//normal_from_map();
+    // vec3 V = normalize(u_CameraPos - PS_IN_FragPos);
+    // vec3 R = reflect(-V, N); 
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
-    vec3 F0 = vec3(0.04); 
-    F0 = mix(F0, albedo, metallic);
+    // vec3 F0 = vec3(0.04); 
+    // F0 = mix(F0, albedo, metallic);
 
-    // reflectance equation
-    vec3 Lo = vec3(0.0);
+    // // reflectance equation
+    // vec3 Lo = vec3(0.0);
     // for(int i = 0; i < 4; ++i) 
     // {
     //     // calculate per-light radiance
@@ -195,29 +197,30 @@ void main()
     // }   
     
     // ambient lighting (we now use IBL as the ambient term)
-    vec3 F = fresnel_schlick_roughness(max(dot(N, V), 0.0), F0, roughness);
+    // vec3 F = fresnel_schlick_roughness(max(dot(N, V), 0.0), F0, roughness);
     
-    vec3 kS = F;
-    vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;	  
+    // vec3 kS = F;
+    // vec3 kD = 1.0 - kS;
+    // kD *= 1.0 - metallic;	  
     
-    vec3 irradiance = evaluate_sh9_irradiance(N);
-    vec3 diffuse      = irradiance * albedo;
+    // vec3 irradiance = evaluate_sh9_irradiance(N);
+    // vec3 diffuse      = irradiance * albedo;
     
-    // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
-    const float MAX_REFLECTION_LOD = 4.0;
-    vec3 prefilteredColor = textureLod(s_Prefiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-    vec2 brdf  = texture(s_BRDF, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+    // // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+    // const float MAX_REFLECTION_LOD = 4.0;
+    // vec3 prefilteredColor = textureLod(s_Prefiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;    
+    // vec2 brdf  = texture(s_BRDF, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    // vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-    vec3 ambient = (kD * diffuse + specular) * ao;
+    // vec3 ambient = (kD * diffuse + specular) * ao;
     
-    vec3 color = ambient + Lo;
+    // vec3 color = ambient + Lo;
 
-    // HDR tonemapping
-    color = color / (color + vec3(1.0));
-    // gamma correct
-    color = pow(color, vec3(1.0/2.2)); 
-
-    PS_OUT_Color = vec4(color , 1.0);
+    // // HDR tonemapping
+    // color = color / (color + vec3(1.0));
+    // // gamma correct
+    // color = pow(color, vec3(1.0/2.2)); 
+    vec3 I = normalize(PS_IN_FragPos - u_CameraPos);
+    vec3 R = reflect(I, normalize(PS_IN_Normal));
+    PS_OUT_Color = vec4(texture(s_Prefiltered, R).rgb, 1.0);
 }
