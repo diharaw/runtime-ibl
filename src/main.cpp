@@ -637,7 +637,7 @@ private:
         m_mesh_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 
 		if (m_mesh_program->set_uniform("s_BRDF", 0))
-			m_brdf_lut->bind(0);
+            m_brdf_lut->bind(0);
 
         if (m_mesh_program->set_uniform("s_IrradianceSH", 1))
             m_sh->bind(1);
@@ -645,29 +645,11 @@ private:
         if (m_mesh_program->set_uniform("s_Prefiltered", 2))
             m_prefilter_cubemap->bind(2);
 
-        if (m_mesh_program->set_uniform("s_Albedo", 3))
-            m_bunny_albedo->bind(3);
-
-        if (m_mesh_program->set_uniform("s_Metallic", 4))
-            m_bunny_metallic->bind(4);
-
-        if (m_mesh_program->set_uniform("s_Roughness", 5))
-            m_bunny_roughness->bind(5);
+        if (m_mesh_program->set_uniform("s_Roughness", 3))
+            m_bunny_roughness->bind(3);
 
         // Draw bunny.
         render_mesh(m_mesh);
-
-        //if (m_mesh_program->set_uniform("s_Albedo", 3))
-        //          m_floor_albedo->bind(3);
-
-        //      if (m_mesh_program->set_uniform("s_Metallic", 4))
-        //          m_floor_metallic->bind(4);
-
-        //      if (m_mesh_program->set_uniform("s_Roughness", 5))
-        //          m_floor_roughness->bind(5);
-
-        //// Draw floor.
-        //      render_mesh(m_mesh);
     }
 
     // -----------------------------------------------------------------------------------------------------------------------------------
@@ -1287,8 +1269,6 @@ private:
     std::unique_ptr<dw::Texture2D> m_floor_metallic;
     std::unique_ptr<dw::Texture2D> m_floor_roughness;
 
-    std::unique_ptr<dw::Texture2D> m_bunny_albedo;
-    std::unique_ptr<dw::Texture2D> m_bunny_metallic;
     std::unique_ptr<dw::Texture2D> m_bunny_roughness;
 
     std::unique_ptr<dw::Shader>  m_cubemap_convert_vs;
