@@ -16,7 +16,7 @@ void main()
 {
     vec4 world_pos = u_Model * vec4(VS_IN_Position, 1.0f);
     PS_IN_FragPos  = world_pos.xyz;
-    PS_IN_TexCoord = VS_IN_Texcoord;
+    PS_IN_TexCoord = VS_IN_Texcoord * 4.0;
 
     mat3 model_mat = mat3(u_Model);
 

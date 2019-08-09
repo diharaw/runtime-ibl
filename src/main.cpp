@@ -581,7 +581,7 @@ private:
             return false;
         }
 
-        m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker_huge.png", false, true));
+        m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker.png", false, true));
 
         return true;
     }
