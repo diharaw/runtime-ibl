@@ -32,14 +32,14 @@ struct SH9Color
 // ----------------------------------------------------------------------------
 float distribution_ggx(vec3 N, vec3 H, float roughness)
 {
-    float a = roughness*roughness;
-    float a2 = a*a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH*NdotH;
+    float a      = roughness * roughness;
+    float a2     = a * a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
 
     float nom   = a2;
     float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = Pi * denom * denom;
+    denom       = Pi * denom * denom;
 
     return nom / denom;
 }
@@ -47,7 +47,7 @@ float distribution_ggx(vec3 N, vec3 H, float roughness)
 float geometry_schlick_ggx(float NdotV, float roughness)
 {
     float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
+    float k = (r * r) / 8.0;
 
     float nom   = NdotV;
     float denom = NdotV * (1.0 - k) + k;
@@ -59,8 +59,8 @@ float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness)
 {
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = geometry_schlick_ggx(NdotV, roughness);
-    float ggx1 = geometry_schlick_ggx(NdotL, roughness);
+    float ggx2  = geometry_schlick_ggx(NdotV, roughness);
+    float ggx1  = geometry_schlick_ggx(NdotL, roughness);
 
     return ggx1 * ggx2;
 }
@@ -93,7 +93,6 @@ void project_onto_sh9(in vec3 dir, inout SH9 sh)
     sh.c[8] = 0.546274 * (dir.x * dir.x - dir.y * dir.y);
 }
 
-
 vec3 evaluate_sh9_irradiance(in vec3 direction)
 {
     SH9 basis;
@@ -125,47 +124,47 @@ vec3 evaluate_sh9_irradiance(in vec3 direction)
 void main()
 {
     // material properties
-    vec3 albedo = vec3(1.0);
-    float metallic = 1.0;
+    vec3  albedo    = vec3(1.0);
+    float metallic  = 1.0;
     float roughness = texture(s_Roughness, PS_IN_TexCoord).r;
 
     // input lighting data
     vec3 N = PS_IN_Normal;
     vec3 V = normalize(u_CameraPos - PS_IN_FragPos);
-    vec3 R = reflect(-V, N); 
+    vec3 R = reflect(-V, N);
 
-    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
-    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
-    vec3 F0 = vec3(0.04); 
-    F0 = mix(F0, albedo, metallic);
+    // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0
+    // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)
+    vec3 F0 = vec3(0.04);
+    F0      = mix(F0, albedo, metallic);
 
     // reflectance equation
     vec3 Lo = vec3(0.0);
-    
+
     // ambient lighting (we now use IBL as the ambient term)
     vec3 F = fresnel_schlick_roughness(max(dot(N, V), 0.0), F0, roughness);
-    
+
     vec3 kS = F;
     vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;	  
-    
+    kD *= 1.0 - metallic;
+
     vec3 irradiance = evaluate_sh9_irradiance(N);
-    vec3 diffuse      = irradiance * albedo;
-    
+    vec3 diffuse    = irradiance * albedo;
+
     // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
     const float MAX_REFLECTION_LOD = 4.0;
-    vec3 prefilteredColor = textureLod(s_Prefiltered, R,  roughness * MAX_REFLECTION_LOD).rgb;    
-    vec2 brdf  = texture(s_BRDF, vec2(max(dot(N, V), 0.0), roughness)).rg;
-    vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+    vec3        prefilteredColor   = textureLod(s_Prefiltered, R, roughness * MAX_REFLECTION_LOD).rgb;
+    vec2        brdf               = texture(s_BRDF, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    vec3        specular           = prefilteredColor * (F * brdf.x + brdf.y);
 
     vec3 ambient = (kD * diffuse + specular) * 0.3;
-    
+
     vec3 color = ambient + Lo;
 
     // HDR tonemapping
     color = color / (color + vec3(1.0));
     // gamma correct
-    color = pow(color, vec3(1.0/2.2)); 
+    color = pow(color, vec3(1.0 / 2.2));
 
     PS_OUT_Color = vec4(color, 1.0);
 }

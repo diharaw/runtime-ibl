@@ -636,7 +636,7 @@ private:
         m_mesh_program->set_uniform("u_Projection", m_main_camera->m_projection);
         m_mesh_program->set_uniform("u_CameraPos", m_main_camera->m_position);
 
-		if (m_mesh_program->set_uniform("s_BRDF", 0))
+        if (m_mesh_program->set_uniform("s_BRDF", 0))
             m_brdf_lut->bind(0);
 
         if (m_mesh_program->set_uniform("s_IrradianceSH", 1))

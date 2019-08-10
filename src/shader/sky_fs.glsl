@@ -10,7 +10,7 @@ uniform sampler2D s_SH;
 
 uniform int   u_Type;
 uniform float u_Roughness;
-uniform vec3  u_CameraPos;
+uniform vec3 u_CameraPos;
 
 const float Pi       = 3.141592654;
 const float CosineA0 = Pi;

@@ -16,7 +16,7 @@ in vec3 PS_IN_WorldPos;
 // UNIFORM ----------------------------------------------------------
 // ------------------------------------------------------------------
 
-uniform vec3  u_CameraPos;
+uniform vec3 u_CameraPos;
 
 // ------------------------------------------------------------------
 // MAIN -------------------------------------------------------------
@@ -24,17 +24,17 @@ uniform vec3  u_CameraPos;
 
 void main()
 {
-	vec3 dir = normalize(PS_IN_WorldPos);
+    vec3 dir = normalize(PS_IN_WorldPos);
 
     float sun = step(cos(M_PI / 360.0), dot(dir, SUN_DIR));
-                    
-    vec3 sunColor = vec3(sun,sun,sun) * SUN_INTENSITY;
+
+    vec3 sunColor = vec3(sun, sun, sun) * SUN_INTENSITY;
 
     vec3 extinction;
     vec3 inscatter = SkyRadiance(u_CameraPos, dir, extinction);
-    vec3 col = sunColor * extinction + inscatter;
+    vec3 col       = sunColor * extinction + inscatter;
 
-	PS_OUT_Color = vec4(col, 1.0);
+    PS_OUT_Color = vec4(col, 1.0);
 }
 
 // ------------------------------------------------------------------
