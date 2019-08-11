@@ -52,7 +52,7 @@ struct SkyModel
         m_irradiance_t    = new_texture_2d(IRRADIANCE_W, IRRADIANCE_H);
         m_inscatter_t     = new_texture_3d(INSCATTER_MU_S * INSCATTER_NU, INSCATTER_MU, INSCATTER_R);
 
-        FILE* transmittance = fopen("transmittance.raw", "r");
+        FILE* transmittance = fopen("texture/transmittance.raw", "r");
 
         if (transmittance)
         {
@@ -69,7 +69,7 @@ struct SkyModel
         else
             return false;
 
-        FILE* irradiance = fopen("irradiance.raw", "r");
+        FILE* irradiance = fopen("texture/irradiance.raw", "r");
 
         if (irradiance)
         {
@@ -86,7 +86,7 @@ struct SkyModel
         else
             return false;
 
-        FILE* inscatter = fopen("inscatter.raw", "r");
+        FILE* inscatter = fopen("texture/inscatter.raw", "r");
 
         if (inscatter)
         {
@@ -581,7 +581,7 @@ private:
             return false;
         }
 
-        m_bunny_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker.png", false, true));
+        m_mesh_roughness = std::unique_ptr<dw::Texture2D>(dw::Texture2D::create_from_files("texture/checker.png", false, true));
 
         return true;
     }
@@ -646,7 +646,7 @@ private:
             m_prefilter_cubemap->bind(2);
 
         if (m_mesh_program->set_uniform("s_Roughness", 3))
-            m_bunny_roughness->bind(3);
+            m_mesh_roughness->bind(3);
 
         // Draw bunny.
         render_mesh(m_mesh);
@@ -1265,11 +1265,7 @@ private:
     std::unique_ptr<dw::Texture2D>   m_sh_intermediate;
     std::unique_ptr<dw::Texture2D>   m_brdf_lut;
 
-    std::unique_ptr<dw::Texture2D> m_floor_albedo;
-    std::unique_ptr<dw::Texture2D> m_floor_metallic;
-    std::unique_ptr<dw::Texture2D> m_floor_roughness;
-
-    std::unique_ptr<dw::Texture2D> m_bunny_roughness;
+    std::unique_ptr<dw::Texture2D> m_mesh_roughness;
 
     std::unique_ptr<dw::Shader>  m_cubemap_convert_vs;
     std::unique_ptr<dw::Shader>  m_cubemap_convert_fs;
