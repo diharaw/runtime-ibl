@@ -2,6 +2,10 @@
 
 An OpenGL sample application demonstrating runtime irradiance map generation using Spherical Harmonics and cubemap prefiltering using Importance Sampling for dynamic reflection probes.
 
+## Screenshots
+
+![RuntimeIBL](data/screenshot.jpg)
+
 ## Dependencies
 * [dwSampleFramework](https://github.com/diharaw/dwSampleFramework) 
 
